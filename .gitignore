@@ -1,0 +1,4 @@
+nanobind_test.egg-info
+_skbuild
+/dist
+__pycache__
