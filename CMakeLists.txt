@@ -2,7 +2,7 @@ project(nanobind_example)
 cmake_minimum_required(VERSION 3.17...3.22)
 
 if (NOT SKBUILD)
-  message(FATAL_ERROR "This CMake file should be executed via scikit-build. "
+  message(WARNING "This CMake file should be executed via scikit-build. "
                       "Please run\n$ pip install .")
 endif()
 
@@ -16,6 +16,11 @@ if (SKBUILD)
   set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
   set(Python_INCLUDE_DIR "${PYTHON_INCLUDE_DIR}")
   set(Python_LIBRARIES "${PYTHON_LIBRARY}")
+else()
+  # Find any Python version (this should be narrowed to the one with nanobind)
+  find_package(PythonInterp)
+  find_package(PythonLibs)
+  find_package(Python)
 endif()
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 
