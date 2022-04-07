@@ -6,3 +6,4 @@ build
 *.pyd
 *.egg-info
 .vscode
+.vs
