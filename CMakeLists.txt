@@ -1,9 +1,9 @@
 project(nanobind_example)
-cmake_minimum_required(VERSION 3.17...3.22)
+cmake_minimum_required(VERSION 3.18...3.22)
 
 if (NOT SKBUILD)
   message(WARNING "This CMake file should be executed via scikit-build. "
-                      "Please run\n$ pip install .")
+                  "Please run\n$ pip install .")
 endif()
 
 if (SKBUILD)

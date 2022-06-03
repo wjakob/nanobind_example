@@ -2,9 +2,9 @@
 requires = [
     "setuptools>=42",
     "wheel",
-    "scikit-build",
-    "cmake>=3.17",
-    "nanobind>=0.0.2",
+    "scikit-build==0.14.0",
+    "cmake>=3.18",
+    "nanobind>=0.0.3",
     "ninja; platform_system!='Windows'"
 ]
 
