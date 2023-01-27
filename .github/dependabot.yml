@@ -9,3 +9,7 @@ updates:
       # Offical actions have moving tags like v1
       # that are used, so they don't need updates here
       - dependency-name: "actions/*"
+      # cibuildwheel updates often and cannot be tracked by
+      # a major version tag like 'v1'. Mute updates since
+      # this is not a critical component
+      - dependency-name: "pypa/cibuildwheel*"
