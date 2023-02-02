@@ -69,8 +69,8 @@ nanobind_add_module(
   # Build libnanobind statically and merge it into the
   # extension (which itself remains a shared library)
   #
-  # If your project builds multiple extensions, you could
-  # consider removing this flag to conserve space by
+  # If your project builds multiple extensions, you can
+  # replace this flag by NB_SHARED to conserve space by
   # reusing a shared libnanobind across libraries
   NB_STATIC
 
