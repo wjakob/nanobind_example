@@ -34,12 +34,6 @@ if (SKBUILD)
   set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
   set(Python_INCLUDE_DIR "${PYTHON_INCLUDE_DIR}")
   set(Python_LIBRARY "${PYTHON_LIBRARY}")
-
-  message(STATUS "Information from scikit-build:")
-  message(STATUS "  - Python_VERSION_STRING = ${Python_VERSION_STRING}")
-  message(STATUS "  - Python_EXECUTABLE = ${Python_EXECUTABLE}")
-  message(STATUS "  - Python_INCLUDE_DIR = ${Python_INCLUDE_DIR}")
-  message(STATUS "  - Python_LIBRARY = ${Python_LIBRARY}")
 elseif (MSVC)
   # MSVC needs a little extra help finding the Python library
   find_package(PythonInterp)
@@ -55,11 +49,9 @@ endif()
 
 # Run `nanobind.cmake_dir()` from Python to detect where nanobind is installed
 execute_process(
-  COMMAND
-  "${PYTHON_EXECUTABLE}" -c "import nanobind; print(nanobind.cmake_dir())"
-  OUTPUT_VARIABLE _tmp_dir
-  OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ECHO STDOUT)
-list(APPEND CMAKE_PREFIX_PATH "${_tmp_dir}")
+  COMMAND "${Python_EXECUTABLE}" -c "import nanobind; print(nanobind.cmake_dir())"
+  OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE NB_DIR)
+list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
 
 # Now, import nanobind through CMake's find_package mechanism
 find_package(nanobind CONFIG REQUIRED)
