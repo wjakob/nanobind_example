@@ -1,4 +1,4 @@
-import sys, re, os
+import sys
 
 try:
     from skbuild import setup
