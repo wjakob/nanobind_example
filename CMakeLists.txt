@@ -21,12 +21,10 @@ if (NOT SKBUILD)
   =====================================================================")
 endif()
 
-# Create CMake targets for all Python components needed by nanobind
-if(Python_INTERPRETER_ID STREQUAL "Python")
-  find_package(Python 3.8 COMPONENTS Interpreter Development.Module Development.SABIModule REQUIRED)
-else()
-  find_package(Python 3.8 COMPONENTS Interpreter Development.Module REQUIRED)
-endif()
+# Try to import all Python components potentially needed by nanobind
+find_package(Python 3.8
+  REQUIRED COMPONENTS Interpreter Development.Module
+  OPTIONAL_COMPONENTS Development.SABIModule)
 
 # Import nanobind through CMake's find_package mechanism
 find_package(nanobind CONFIG REQUIRED)
