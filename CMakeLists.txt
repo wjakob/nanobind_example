@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18...3.22)
+cmake_minimum_required(VERSION 3.15...3.26)
 
 project(nanobind_example LANGUAGES CXX)
 
@@ -17,28 +17,14 @@ if (NOT SKBUILD)
   in your environment once and use the following command that avoids
   a costly creation of a new virtual environment at every compilation:
   =====================================================================
-   $ python setup.py install
+   $ pip install --no-build-isolation -v .
   =====================================================================")
 endif()
 
-# Perform a release build by default
-if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-endif()
-
-# Create CMake targets for all Python components needed by nanobind
-if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.26 AND Python_INTERPRETER_ID STREQUAL "Python")
-  find_package(Python 3.8 COMPONENTS Interpreter Development.Module Development.SABIModule REQUIRED)
-else()
-  find_package(Python 3.8 COMPONENTS Interpreter Development.Module REQUIRED)
-endif()
-
-# Determine the nanobind CMake include path and register it
-execute_process(
-  COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
-  OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE NB_DIR)
-list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
+# Try to import all Python components potentially needed by nanobind
+find_package(Python 3.8
+  REQUIRED COMPONENTS Interpreter Development.Module
+  OPTIONAL_COMPONENTS Development.SABIModule)
 
 # Import nanobind through CMake's find_package mechanism
 find_package(nanobind CONFIG REQUIRED)
@@ -66,4 +52,4 @@ nanobind_add_module(
 )
 
 # Install directive for scikit-build
-install(TARGETS nanobind_example_ext LIBRARY DESTINATION .)
+install(TARGETS nanobind_example_ext LIBRARY DESTINATION nanobind_example)
