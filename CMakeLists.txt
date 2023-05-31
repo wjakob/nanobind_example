@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18...3.22)
 
-project(nanobind_example)
+project(nanobind_example LANGUAGES CXX)
 
 if (NOT SKBUILD)
   message(WARNING "\
