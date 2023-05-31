@@ -20,4 +20,4 @@ Homepage = "https://github.com/wjakob/nanobind_example"
 
 [[tool.cibuildwheel.overrides]]
 select = "cp312-*"
-config-settings = {wheel.py-api = "cp312"}
+config-settings = {"wheel.py-api" = "cp312"}
