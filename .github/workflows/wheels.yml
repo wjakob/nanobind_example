@@ -12,7 +12,6 @@ on:
 
 env:
   # Python 3.12+ is handled using the stable ABI, no need to build later versions
-  CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8, <3.13"
   # Only build for PyPy 3.9
   CIBW_SKIP: "pp37* pp38*"
   # Target 64 bit architectures (x86_64, and arm64 on macOS)
