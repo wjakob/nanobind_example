@@ -48,7 +48,7 @@ jobs:
         # Cross-compile on macOS
         CIBW_ARCHS_MACOS: x86_64 arm64
 
-        # Temporary: use pre-release Python 3.12 for stable API builds
+        # Temporary: use pre-release Python 3.12 for stable ABI builds
         CIBW_PRERELEASE_PYTHONS: True
 
     - name: Verify clean directory
