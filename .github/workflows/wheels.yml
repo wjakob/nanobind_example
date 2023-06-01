@@ -10,6 +10,9 @@ on:
     types:
       - published
 
+env:
+  FORCE_COLOR: 3
+
 jobs:
   build_sdist:
     name: Build SDist
@@ -55,8 +58,7 @@ jobs:
         CIBW_PRERELEASE_PYTHONS: True
         
         # Debugging
-        CMAKE_VERBOSE_MAKEFILE: 1
-        FORCE_COLOR: 3
+        SKBUILD_CMAKE_VERBOSE: 1
 
     - name: Verify clean directory
       run: git diff --exit-code
