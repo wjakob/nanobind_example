@@ -14,7 +14,7 @@ nanobind_example
 
 This repository contains a tiny project showing how to create C++ bindings
 using [nanobind](https://github.com/wjakob/nanobind) and
-[scikit-build](https://scikit-build.readthedocs.io/en/latest/index.html). It
+[scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/index.html). It
 was derived from the corresponding _pybind11_ [example
 project](https://github.com/pybind/cmake_example/) developed by
 [@henryiii](https://github.com/henryiii).
