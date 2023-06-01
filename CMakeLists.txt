@@ -51,5 +51,5 @@ nanobind_add_module(
   src/nanobind_example_ext.cpp
 )
 
-# Install directive for scikit-build
+# Install directive for scikit-build-core
 install(TARGETS nanobind_example_ext LIBRARY DESTINATION nanobind_example)
