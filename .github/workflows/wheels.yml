@@ -48,6 +48,9 @@ jobs:
         # Cross-compile on macOS
         CIBW_ARCHS_MACOS: x86_64 arm64
 
+        # Cross-compile on Win
+        CIBW_ARCHS_WIN: AMD64 ARM64
+
         # Temporary: use pre-release Python 3.12 for stable ABI builds
         CIBW_PRERELEASE_PYTHONS: True
 
