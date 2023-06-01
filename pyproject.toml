@@ -25,8 +25,8 @@ wheel.py-api = "cp312"
 
 
 [tool.cibuildwheel]
-# PyPy37 is no longer supported by PyPy, PyPy38 is not supported by nanobind
-skip = ["pp37*", "pp38*"]
+# PyPy38 is not supported by nanobind
+skip = ["pp38*"]
 
 # 32-bit builds are not supported by nanobind
 archs = ["auto64"]
