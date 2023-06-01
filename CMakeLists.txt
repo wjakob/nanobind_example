@@ -27,8 +27,7 @@ endif()
 
 # Try to import all Python components potentially needed by nanobind
 find_package(Python 3.8
-  REQUIRED COMPONENTS Interpreter Development.Module
-  OPTIONAL_COMPONENTS Development.SABIModule)
+  REQUIRED COMPONENTS Interpreter Development.Module ${SKBUILD_SABI_COMPONENT})
 
 # Import nanobind through CMake's find_package mechanism
 find_package(nanobind CONFIG REQUIRED)
