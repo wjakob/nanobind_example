@@ -53,6 +53,10 @@ jobs:
 
         # Temporary: use pre-release Python 3.12 for stable ABI builds
         CIBW_PRERELEASE_PYTHONS: True
+        
+        # Debugging
+        CMAKE_VERBOSE_MAKEFILE: 1
+        FORCE_COLOR: 3
 
     - name: Verify clean directory
       run: git diff --exit-code
