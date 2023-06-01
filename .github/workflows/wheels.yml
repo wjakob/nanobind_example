@@ -10,28 +10,6 @@ on:
     types:
       - published
 
-env:
-  # Python 3.12+ is handled using the stable ABI, no need to build later versions
-  # Only build for PyPy 3.9
-  CIBW_SKIP: "pp37* pp38*"
-  # Target 64 bit architectures (x86_64, and arm64 on macOS)
-  CIBW_ARCHS_WINDOWS: auto64
-  CIBW_ARCHS_LINUX: auto64
-  CIBW_ARCHS_MACOS: x86_64 arm64
-  # Target older versions of macOS and Linux for good compatibility
-  CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.14
-  CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-  CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
-  # Necessary to see build output from the actual compilation
-  CIBW_BUILD_VERBOSITY: 1
-  # Temporary: use pre-release Python 3.12 for stable API builds
-  CIBW_PRERELEASE_PYTHONS: True
-  # GitHub Actions doesn't have macOS/arm64 runners, skip test on this platform
-  CIBW_TEST_SKIP: "*-macosx_arm64"
-  # Run pytest to ensure that the package was correctly built
-  CIBW_TEST_COMMAND: pytest {project}/tests
-  CIBW_TEST_REQUIRES: pytest
-
 jobs:
   build_sdist:
     name: Build SDist
@@ -66,6 +44,12 @@ jobs:
         submodules: true
 
     - uses: pypa/cibuildwheel@v2.13.0
+      env:
+        # Cross-compile on macOS
+        CIBW_ARCHS_MACOS: x86_64 arm64
+
+        # Temporary: use pre-release Python 3.12 for stable API builds
+        CIBW_PRERELEASE_PYTHONS: True
 
     - name: Verify clean directory
       run: git diff --exit-code

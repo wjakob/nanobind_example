@@ -22,3 +22,23 @@ Homepage = "https://github.com/wjakob/nanobind_example"
 [tool.scikit-build]
 # Build stable ABI wheels for CPython 3.12+
 wheel.py-api = "cp312"
+
+
+[tool.cibuildwheel]
+# PyPy38 is not supported by nanobind
+skip = ["pp38*"]
+
+# 32-bit builds are not supported by nanobind
+archs = ["auto64"]
+
+# Necessary to see build output from the actual compilation
+build-verbosity = 1
+
+# Run pytest to ensure that the package was correctly built
+test-command = "pytest {project}/tests"
+test-requires = "pytest"
+
+# Needed for full C++17 support
+[tool.cibuildwheel.macos.environment]
+MACOSX_DEPLOYMENT_TARGET = "10.14"
+
