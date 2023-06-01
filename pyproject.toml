@@ -23,9 +23,13 @@ Homepage = "https://github.com/wjakob/nanobind_example"
 # Build stable ABI wheels for CPython 3.12+
 wheel.py-api = "cp312"
 
+
 [tool.cibuildwheel]
-# Only build for PyPy 3.9
-skip = ["pp37*", "pp38*"]
+# PyPy37 is no longer supported by PyPy
+skip = ["pp37*"]
+
+# 32-bit builds are not supported by nanobind
+archs = ["auto64"]
 
 # Necessary to see build output from the actual compilation
 build-verbosity = 1

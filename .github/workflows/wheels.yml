@@ -45,15 +45,11 @@ jobs:
 
     - uses: pypa/cibuildwheel@v2.13.0
       env:
-        # Target 64 bit architectures (x86_64, and arm64 on macOS)
-        CIBW_ARCHS: auto64
+        # Cross-compile on macOS
         CIBW_ARCHS_MACOS: x86_64 arm64
 
         # Temporary: use pre-release Python 3.12 for stable API builds
         CIBW_PRERELEASE_PYTHONS: True
-
-        # GitHub Actions doesn't have macOS/arm64 runners, skip test on this platform
-        CIBW_TEST_SKIP "*-macosx_arm64"
 
     - name: Verify clean directory
       run: git diff --exit-code
