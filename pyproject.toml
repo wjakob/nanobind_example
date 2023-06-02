@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core >=0.4.3", "nanobind >=1.3.1"]
+requires = ["scikit-build-core >=0.4.3", "nanobind >=1.3.2"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -31,12 +31,6 @@ wheel.py-api = "cp312"
 
 
 [tool.cibuildwheel]
-# PyPy38 is not supported by nanobind
-skip = ["pp38*"]
-
-# 32-bit builds are not supported by nanobind
-archs = ["auto64"]
-
 # Necessary to see build output from the actual compilation
 build-verbosity = 1
 

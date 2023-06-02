@@ -20,9 +20,9 @@ if (NOT SKBUILD)
    $ pip install nanobind scikit-build-core[pyproject]
    $ pip install --no-build-isolation -ve .
   =====================================================================
-  You can optionally add -Ceditable.rebuild=true to auto-rebuild when you
-  import. Otherwise, you need to rerun the above command when you edit C++ files.
-  ")
+  You may optionally add -Ceditable.rebuild=true to auto-rebuild when
+  the package is imported. Otherwise, you need to re-run the above
+  after editing C++ files.")
 endif()
 
 # Try to import all Python components potentially needed by nanobind
@@ -55,5 +55,5 @@ nanobind_add_module(
   src/nanobind_example_ext.cpp
 )
 
-# Install directive for scikit-build
+# Install directive for scikit-build-core
 install(TARGETS nanobind_example_ext LIBRARY DESTINATION nanobind_example)
