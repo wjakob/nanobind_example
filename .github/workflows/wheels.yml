@@ -61,7 +61,7 @@ jobs:
         
         # Debugging
         SKBUILD_CMAKE_VERBOSE: 1
-        SKBUILD_LOGGING_LEVEL: debug
+        SKBUILD_LOGGING_LEVEL: DEBUG
 
     - name: Verify clean directory
       run: git diff --exit-code
