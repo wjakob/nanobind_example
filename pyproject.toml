@@ -25,9 +25,6 @@ wheel.py-api = "cp312"
 
 
 [tool.cibuildwheel]
-# 32-bit builds are not supported by nanobind
-archs = ["auto64"]
-
 # Necessary to see build output from the actual compilation
 build-verbosity = 1
 
