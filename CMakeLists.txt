@@ -32,6 +32,9 @@ find_package(Python 3.8
 # Import nanobind through CMake's find_package mechanism
 find_package(nanobind CONFIG REQUIRED)
 
+include(CMakePrintHelperes)
+cmake_print_variables(Python_SOABI NB_EXT_SUFFIX)
+
 # We are now ready to compile the actual extension module
 nanobind_add_module(
   # Name of the extension
