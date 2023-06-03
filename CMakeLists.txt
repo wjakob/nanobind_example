@@ -33,7 +33,7 @@ find_package(Python 3.8
 find_package(nanobind CONFIG REQUIRED)
 
 include(CMakePrintHelpers)
-cmake_print_variables(Python_SOABI NB_EXT_SUFFIX)
+cmake_print_variables(Python_SOABI SKBUILD_SOABI NB_SUFFIX)
 
 # We are now ready to compile the actual extension module
 nanobind_add_module(
