@@ -25,8 +25,17 @@ if (NOT SKBUILD)
   after editing C++ files.")
 endif()
 
-message(STATUS "PYTHON_PATH: $ENV{PYTHON_PATH}")
+include(CMakePrintHelpers)
+
+message(STATUS "PYTHONPATH: $ENV{PYTHON_PATH}")
 message(STATUS "_PYTHON_SYSCONFIGDATA_NAME: $ENV{_PYTHON_SYSCONFIGDATA_NAME}")
+
+execute_process(
+  COMMAND "${Python_EXECUTABLE}" "-c"
+    "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))"
+  OUTPUT_VARIABLE EXT_SUFFIX
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+cmake_print_variables(EXT_SUFFIX)
 
 # Try to import all Python components potentially needed by nanobind
 find_package(Python 3.8
@@ -35,10 +44,16 @@ find_package(Python 3.8
 # Import nanobind through CMake's find_package mechanism
 find_package(nanobind CONFIG REQUIRED)
 
-message(STATUS "PYTHON_PATH: $ENV{PYTHON_PATH}")
+execute_process(
+  COMMAND "${Python_EXECUTABLE}" "-c"
+    "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))"
+  OUTPUT_VARIABLE EXT_SUFFIX
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+cmake_print_variables(EXT_SUFFIX)
+
+message(STATUS "PYTHONPATH: $ENV{PYTHON_PATH}")
 message(STATUS "_PYTHON_SYSCONFIGDATA_NAME: $ENV{_PYTHON_SYSCONFIGDATA_NAME}")
 
-include(CMakePrintHelpers)
 cmake_print_variables(Python_SOABI SKBUILD_SOABI NB_SUFFIX)
 
 # We are now ready to compile the actual extension module
