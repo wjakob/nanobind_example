@@ -51,6 +51,13 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE)
 cmake_print_variables(EXT_SUFFIX)
 
+execute_process(
+  COMMAND "${Python_EXECUTABLE}" "-c"
+    "import sysconfig; print(sysconfig.get_config_var('SOABI'))"
+  OUTPUT_VARIABLE SOABI
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+cmake_print_variables(SOABI)
+
 message(STATUS "PYTHONPATH: $ENV{PYTHONPATH}")
 message(STATUS "_PYTHON_SYSCONFIGDATA_NAME: $ENV{_PYTHON_SYSCONFIGDATA_NAME}")
 
