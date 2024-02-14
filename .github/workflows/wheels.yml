@@ -56,9 +56,10 @@ jobs:
       shell: bash
 
     - name: Upload wheels
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         path: wheelhouse/*.whl
+        name: dist-${{ matrix.os }}
 
 
   upload_all:
@@ -72,7 +73,8 @@ jobs:
 
     - uses: actions/download-artifact@v4
       with:
-        name: artifact
+        merge-multiple: true
+        pattern: dist-*
         path: dist
 
     - uses: pypa/gh-action-pypi-publish@release/v1

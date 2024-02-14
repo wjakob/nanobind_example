@@ -55,5 +55,12 @@ nanobind_add_module(
   src/nanobind_example_ext.cpp
 )
 
+nanobind_add_stubs(
+  PATH ${CMAKE_INSTALL_PREFIX}
+  PACKAGE nanobind_example
+  DEPENDS nanobind_example_ext
+  INCLUDE_DOCSTRINGS
+)
+
 # Install directive for scikit-build-core
 install(TARGETS nanobind_example_ext LIBRARY DESTINATION nanobind_example)
