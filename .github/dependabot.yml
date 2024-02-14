@@ -4,9 +4,8 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
-    ignore:
-      # cibuildwheel updates often and cannot be tracked by
-      # a major version tag like 'v1'. Mute updates since
-      # this is not a critical component
-      - dependency-name: "pypa/cibuildwheel*"
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
