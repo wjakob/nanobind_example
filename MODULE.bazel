@@ -1,0 +1,42 @@
+module(
+    name = "nanobind_example",
+    version = "0.1.0",
+)
+
+bazel_dep(name = "nanobind_bazel", version = "")
+local_path_override(
+    module_name = "nanobind_bazel",
+    path = "../nanobind-bazel",
+)
+
+bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
+git_override(
+    module_name = "hedron_compile_commands",
+    commit = "204aa593e002cbd177d30f11f54cff3559110bb9",
+    remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
+)
+
+bazel_dep(name = "rules_python", version = "0.31.0")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    python_version = "3.8",
+)
+python.toolchain(
+    python_version = "3.9",
+)
+python.toolchain(
+    python_version = "3.10",
+)
+python.toolchain(
+    python_version = "3.11",
+)
+python.toolchain(
+    # Only set when you have multiple toolchain versions.
+    is_default = True,
+    python_version = "3.12",
+)
+use_repo(
+    python,
+    python = "python_versions",
+)
