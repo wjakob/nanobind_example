@@ -27,6 +27,7 @@ jobs:
 
     - uses: actions/upload-artifact@v4
       with:
+        name: dist-sdist
         path: dist/*.tar.gz
 
 
@@ -55,10 +56,20 @@ jobs:
         path: wheelhouse/*.whl
         name: dist-${{ matrix.os }}
 
+  merge_wheels:
+    name: Merge wheels into a combined artifact
+    runs-on: ubuntu-latest
+    needs: [build_wheels, build_sdist]
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: dist
+          pattern: dist-*
 
   upload_all:
     name: Upload if release
-    needs: [build_wheels, build_sdist]
+    needs: merge_wheels
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
@@ -67,8 +78,6 @@ jobs:
 
     - uses: actions/download-artifact@v4
       with:
-        merge-multiple: true
-        pattern: dist-*
         path: dist
 
     - uses: pypa/gh-action-pypi-publish@release/v1

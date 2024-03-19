@@ -29,7 +29,6 @@ build-dir = "build/{wheel_tag}"
 # Build stable ABI wheels for CPython 3.12+
 wheel.py-api = "cp312"
 
-
 [tool.cibuildwheel]
 # Necessary to see build output from the actual compilation
 build-verbosity = 1
@@ -38,7 +37,9 @@ build-verbosity = 1
 test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
+# Don't generate a Python 3.8 wheel on macOS/arm64
+skip="cp38-macosx_*:arm64"
+
 # Needed for full C++17 support
 [tool.cibuildwheel.macos.environment]
 MACOSX_DEPLOYMENT_TARGET = "10.14"
-
