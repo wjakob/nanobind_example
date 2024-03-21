@@ -31,7 +31,7 @@ build-dir = "build/{wheel_tag}"
 wheel.py-api = "cp312"
 
 cmake.verbose = true
-logging.level = "INFO"
+logging.level = "DEBUG"
 
 [tool.cibuildwheel]
 # Necessary to see build output from the actual compilation
