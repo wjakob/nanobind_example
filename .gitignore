@@ -7,3 +7,7 @@ build
 *.egg-info
 .vscode
 .vs
+
+# Bazel-specific.
+!src/BUILD
+MODULE.bazel.lock

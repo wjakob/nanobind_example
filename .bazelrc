@@ -1,0 +1,17 @@
+# Enable automatic configs based on platform
+common --enable_platform_specific_config
+
+# Set minimum supported C++ version
+build:macos --host_cxxopt=-std=c++17 --cxxopt=-std=c++17
+build:linux --host_cxxopt=-std=c++17 --cxxopt=-std=c++17
+build:windows --host_cxxopt=/std:c++17 --cxxopt=/std:c++17
+
+# Set minimum supported MacOS version to 10.14 for C++17.
+build:macos --macos_minimum_os=10.14
+
+# nanobind's minsize.
+build --flag_alias=minsize=@nanobind_bazel//:minsize
+# nanobind's py-limited-api.
+build --flag_alias=py_limited_api=@nanobind_bazel//:py-limited-api
+# rules_python's Python version, should not collide with builtin --python_version.
+build --flag_alias=target_python_version=@rules_python//python/config_settings:python_version
