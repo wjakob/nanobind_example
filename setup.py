@@ -102,7 +102,10 @@ class BuildBazelExtension(build_ext.build_ext):
                     should_copy = True
 
                 if should_copy:
-                    shutil.copyfile(root / fp, libdir / fp)
+                    new_directory = libdir / os.path.relpath(root, srcdir)
+                    if not os.path.exists(new_directory):
+                        os.mkdir(new_directory)
+                    shutil.copyfile(root / fp, libdir / new_directory / fp)
 
 
 setuptools.setup(
