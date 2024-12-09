@@ -19,6 +19,9 @@ was derived from the corresponding _pybind11_ [example
 project](https://github.com/pybind/scikit_build_example/) developed by
 [@henryiii](https://github.com/henryiii).
 
+Furthermore, the [bazel](https://github.com/wjakob/nanobind_example/tree/bazel) branch contains an example
+on how to build nanobind bindings extensions with Bazel using the [nanobind-bazel](https://github.com/nicholasjng/nanobind-bazel/) project.
+
 Installation
 ------------
 
