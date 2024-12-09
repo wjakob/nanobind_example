@@ -32,7 +32,7 @@ class BuildBazelExtension(build_ext.build_ext):
     def run(self):
         for ext in self.extensions:
             self.bazel_build(ext)
-        super().run()
+
         # explicitly call `bazel shutdown` for graceful exit
         self.spawn(["bazel", "shutdown"])
 
@@ -63,14 +63,6 @@ class BuildBazelExtension(build_ext.build_ext):
 
         if ext.py_limited_api:
             bazel_argv += ["--py_limited_api=cp312"]
-
-        if IS_WINDOWS:
-            # Link with python*.lib.
-            # This technically breaks the hermeticity of rules_python,
-            # but its library target does not contain libs/python3.lib for SABI builds,
-            # so we source it from the build interpreter instead.
-            for library_dir in self.library_dirs:
-                bazel_argv.append("--linkopt=/LIBPATH:" + library_dir)
 
         self.spawn(bazel_argv)
 
