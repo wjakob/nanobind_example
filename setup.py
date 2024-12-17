@@ -9,9 +9,13 @@ from setuptools.command import build_ext
 
 IS_WINDOWS = platform.system() == "Windows"
 
+# free-threaded build option, requires Python 3.13+.
+# Source: https://docs.python.org/3/howto/free-threading-python.html#identifying-free-threaded-python
+free_threaded = "experimental free-threading build" in sys.version
 # hardcoded SABI-related options. Requires that each Python interpreter
 # (hermetic or not) participating is of the same major-minor version.
-py_limited_api = sys.version_info >= (3, 12)
+# Cannot be used together with free-threading.
+py_limited_api = sys.version_info >= (3, 12) and not free_threaded
 options = {"bdist_wheel": {"py_limited_api": "cp312"}} if py_limited_api else {}
 
 
@@ -21,6 +25,7 @@ class BazelExtension(setuptools.Extension):
     def __init__(self, name: str, bazel_target: str, **kwargs):
         super().__init__(name=name, sources=[], **kwargs)
 
+        self.free_threaded = free_threaded
         self.bazel_target = bazel_target
         stripped_target = bazel_target.split("//")[-1]
         self.relpath, self.target_name = stripped_target.split(":")
@@ -62,6 +67,11 @@ class BuildBazelExtension(build_ext.build_ext):
 
         if ext.py_limited_api:
             bazel_argv += ["--py_limited_api=cp312"]
+        if ext.free_threaded:
+            bazel_argv += [
+                "--@nanobind_bazel//:free_threading",
+                "--free_threaded=yes",
+            ]
 
         self.spawn(bazel_argv)
 
@@ -106,6 +116,7 @@ setuptools.setup(
         BazelExtension(
             name="nanobind_example.nanobind_example_ext",
             bazel_target="//src:nanobind_example_ext_stubgen",
+            free_threaded=free_threaded,
             py_limited_api=py_limited_api,
         )
     ],

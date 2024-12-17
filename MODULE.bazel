@@ -12,5 +12,6 @@ python.toolchain(
     is_default = True,
     python_version = "3.12",
 )
+python.toolchain(python_version = "3.13")
 
 use_repo(python, python = "python_versions")

@@ -15,3 +15,6 @@ build --flag_alias=minsize=@nanobind_bazel//:minsize
 build --flag_alias=py_limited_api=@nanobind_bazel//:py-limited-api
 # rules_python's Python version, should not collide with builtin --python_version.
 build --flag_alias=target_python_version=@rules_python//python/config_settings:python_version
+# rules_python's indicator to only use free-threaded toolchains for CPython 3.13+.
+# Needs to be given _together with_ nanobind-bazel's `free_threading` flag.
+build --flag_alias=free_threaded=@rules_python//python/config_settings:py_freethreaded
