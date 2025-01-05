@@ -7,12 +7,10 @@ from pathlib import Path
 import setuptools
 from setuptools.command import build_ext
 
-IS_WINDOWS = platform.system() == "Windows"
-
 # free-threaded build option, requires Python 3.13+.
 # Source: https://docs.python.org/3/howto/free-threading-python.html#identifying-free-threaded-python
 free_threaded = "experimental free-threading build" in sys.version
-# hardcoded SABI-related options. Requires that each Python interpreter
+# SABI-related options. Requires that each Python interpreter
 # (hermetic or not) participating is of the same major-minor version.
 # Cannot be used together with free-threading.
 py_limited_api = sys.version_info >= (3, 12) and not free_threaded
@@ -68,14 +66,11 @@ class BuildBazelExtension(build_ext.build_ext):
         if ext.py_limited_api:
             bazel_argv += ["--py_limited_api=cp312"]
         if ext.free_threaded:
-            bazel_argv += [
-                "--@nanobind_bazel//:free_threading",
-                "--free_threaded=yes",
-            ]
+            bazel_argv += ["--free_threaded=yes"]
 
         self.spawn(bazel_argv)
 
-        if IS_WINDOWS:
+        if platform.system() == "Windows":
             suffix = ".pyd"
         else:
             suffix = ".abi3.so" if ext.py_limited_api else ".so"
