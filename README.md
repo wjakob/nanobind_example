@@ -22,6 +22,10 @@ project](https://github.com/pybind/scikit_build_example/) developed by
 Furthermore, the [bazel](https://github.com/wjakob/nanobind_example/tree/bazel) branch contains an example
 on how to build nanobind bindings extensions with Bazel using the [nanobind-bazel](https://github.com/nicholasjng/nanobind-bazel/) project.
 
+Similarly, the [setuptools](https://github.com/wjakob/nanobind_example/tree/setuptools) branch contains a recipe for
+building nanobind extensions with [setuptools](https://setuptools.pypa.io/en/latest/), a popular Python packaging
+solution with support for C++ extensions.
+
 Installation
 ------------
 
