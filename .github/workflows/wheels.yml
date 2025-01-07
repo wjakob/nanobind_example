@@ -46,11 +46,6 @@ jobs:
 
     - uses: pypa/cibuildwheel@v2.22
     
-    - uses: pypa/cibuildwheel@v2.22
-      if: runner.os == 'Linux'
-      env:
-        CIBW_ARCHS: wasm32
-
     - name: Verify clean directory
       run: git diff --exit-code
       shell: bash
@@ -60,6 +55,31 @@ jobs:
       with:
         path: wheelhouse/*.whl
         name: dist-${{ matrix.os }}
+
+  build_pyodide_wheel:
+    name: Pyodide wheel
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: install cibuildwheel
+      run: pip install cibuildwheel
+
+    - name: build pyiodide wheel
+      run: cibuildwheel --platform pyodide
+    
+    - name: Verify clean directory
+      run: git diff --exit-code
+      shell: bash
+
+    - name: Upload wheels
+      uses: actions/upload-artifact@v4
+      with:
+        path: wheelhouse/*.whl
+        name: dist-pyodide
 
   upload_all:
     name: Upload if release

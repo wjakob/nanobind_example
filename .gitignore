@@ -7,3 +7,4 @@ build
 *.egg-info
 .vscode
 .vs
+.env
