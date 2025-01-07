@@ -45,6 +45,11 @@ jobs:
         submodules: true
 
     - uses: pypa/cibuildwheel@v2.22
+    
+    - uses: pypa/cibuildwheel@v2.22
+      if: runner.os == 'Linux'
+      env:
+        CIBW_ARCHS: wasm32
 
     - name: Verify clean directory
       run: git diff --exit-code
