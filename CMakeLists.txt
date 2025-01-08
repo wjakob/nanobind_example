@@ -39,14 +39,16 @@ find_package(nanobind CONFIG REQUIRED)
 add_library(tvbk
   STATIC
   src/tvbk.h
-  src/conn.c
+  src/conn.cpp
   src/r123.cpp
   src/matmul.cpp
   src/ode.c
 )
 set_target_properties(tvbk PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_options(tvbk PRIVATE
-  -O3 -funroll-loops -ffast-math -fopenmp-simd -march=native)
+
+# XXX enable on gcc/linux for performance
+# target_compile_options(tvbk PRIVATE
+#   -O3 -funroll-loops -ffast-math -fopenmp-simd -march=native -mavx2)
 
 # setup binding module
 nanobind_add_module(

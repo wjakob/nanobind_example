@@ -15,8 +15,6 @@
     _Pragma("GCC ivdep") \
     */
 
-
-
 #define make_ode_step(model, nsvar, width) \
 tvbk_declare_ode_step(model) \
 { \
