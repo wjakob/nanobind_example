@@ -26,7 +26,7 @@ INLINE static void name ## width (args) \
     expr;\
 }
 #else
-#define INLINE
+#define INLINE __forceinline
 
 #define kernel(name, width, expr, ...) \
 INLINE static void name ## width (__VA_ARGS__) \

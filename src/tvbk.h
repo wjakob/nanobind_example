@@ -72,8 +72,9 @@ void tvbk_cx_nop(const tvbk_cx *cx, const tvbk_conn *conn, uint32_t t);
 
 void tvbk_cx_i_b8(const tvbk_cx *cx, const tvbk_conn *conn, uint32_t t);
 
-void tvbk_randn(uint32_t seed1, uint32_t count, float *out);
-void tvbk_randn_popcount(uint64_t *seed, int n, float *out);
+// void tvbk_randn(uint32_t seed1, uint32_t count, float *out);
+
+void tvbk_randn(uint64_t *seed, int n, float *out);
 
 /* draft towards ode.c */
 typedef struct tvbk_sim tvbk_sim;
