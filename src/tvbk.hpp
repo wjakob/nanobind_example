@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <math.h>
 
 #ifdef _MSC_VER
 #define INLINE __forceinline
@@ -107,6 +108,118 @@ INLINE void randn(uint64_t *seed, int n, float *out) {
   #pragma omp simd
   for (int i = 0; i < n; i++)
     out[i] = randn1(seed);
+}
+
+// at -O3 -fopen-simd, these kernels result in compact asm
+#define kernel(name, expr, args...) \
+template <int width> INLINE static void name (args) \
+{ \
+  _Pragma("omp simd") \
+  for (int i=0; i < width; i++) \
+    expr;\
+}
+
+/* simple stuff */
+kernel(inc,      x[i]                    += w*y[i], float *x, float *y, float w)
+kernel(adds,     x[i]                         += a, float *x, float a)
+kernel(load,     x[i]                       = y[i], float *x, float *y)
+kernel(zero,     x[i]                        = 0.f, float *x)
+
+/* Heun stages */
+kernel(heunpred, xi[i]           = x[i] + dt*dx[i], float *x, float *xi, float *dx, float dt)
+kernel(heuncorr, x[i] += dt*0.5f*(dx1[i] + dx2[i]), float *x, float *dx1, float *dx2, float dt)
+kernel(sheunpred, xi[i]           = x[i] + dt*dx[i] + z[i], float *x, float *xi, float *dx, float *z, float dt)
+kernel(sheuncorr, x[i] += dt*0.5f*(dx1[i] + dx2[i]) + z[i], float *x, float *dx1, float *dx2, float *z, float dt)
+
+/* activation functions */
+kernel(sigm,     x[i] = 1.0f/(1.0f + expf(y[i])), float *x, float *y)
+kernel(heavi,    x[i] = y[i] >= 0.0f ? 1.0f : 0.0f, float *x, float *y)
+kernel(relu,     x[i] = y[i] >= 0.0f ? y[i] : 0.0f, float *x, float *y)
+kernel(lrelu,    x[i] = y[i] >= 0.0f ? y[i] : 0.01f*y[i], float *x, float *y)
+
+/* transcendentals; vectorized by gcc w/ libmvec;
+   need sleef or similar elsewhere */
+kernel(kfabsf, x[i] = fabsf(y[i]), float *x, float *y)
+kernel(klogf,  x[i] = logf(y[i]), float *x, float *y)
+kernel(kpowfp,  x[i] = powf(y[i], z[i]), float *x, float *y, float *z)
+kernel(kpowf,  x[i] = powf(y[i], z), float *x, float *y, float z)
+kernel(kexpf,  x[i] = expf(y[i]), float *x, float *y)
+kernel(kexp2f, x[i] = exp2f(y[i]), float *x, float *y)
+kernel(ksqrtf, x[i] = sqrtf(y[i]), float *x, float *y)
+kernel(ksinf,  x[i] = sinf(y[i]), float *x, float *y)
+kernel(kcosf,  x[i] = cosf(y[i]), float *x, float *y)
+kernel(ktanf,  x[i] = tanf(y[i]), float *x, float *y)
+kernel(kerff,  x[i] = erff(y[i]), float *x, float *y)
+
+/* short length dot product accumulates, so doesn't fit into
+   macro above */
+template <int width>
+INLINE static void dot(float *dst, float *x, float *y)
+{
+    float acc=0.f;
+    #pragma omp simd reduction(+:acc)
+    for (int i=0; i<width; i++) acc+=x[i]*y[i];
+    *dst = acc;
+}
+
+template <uint8_t nsvar, uint8_t width, typename dfun>
+struct model
+{
+  const uint32_t num_node, horizon, horizon_minus_1;
+  float *states, *params, dt;
+  const cx &cx;
+  
+  void step(const uint32_t i_node, const uint32_t i_time,
+            const float* cx1, const float* cx2)
+  {
+    float x[nsvar*width], xi[nsvar*width], dx1[nsvar*width], dx2[nsvar*width], z[nsvar*width];
+    for (int svar=0; svar < nsvar; svar++)
+    {
+        load<width>(x+svar*width, states+width*(i_node + num_node*svar));
+        zero<width>(xi+svar*width);
+        zero<width>(dx1+svar*width);
+        zero<width>(dx2+svar*width);
+        zero<width>(z+svar*width);
+    }
+    
+    dfun(x, x+width, cx1, params, params+width, params+2*width, dx1, dx1+width);
+
+    for (int svar=0; svar < nsvar; svar++)
+        heunpred<width>(x+svar*width, xi+svar*width, dx1+svar*width, dt);
+
+    dfun(xi, xi + width, cx2, params, params + width, params + 2 * width, dx2,
+         dx2 + width);
+    for (int svar=0; svar < nsvar; svar++)
+    {
+        heuncorr<width>(x+svar*width, dx1+svar*width, dx2+svar*width, dt);
+        load<width>(states+width*(i_node + num_node*svar), x+svar*width);
+    }
+    int write_time = i_time & horizon_minus_1;
+    load<width>(cx.buf + width * (i_node * horizon + write_time),
+                states + width * (i_node + num_node * 0));
+  }
+};
+
+template <uint8_t width>
+struct dfun_linear {
+  void operator()(const float *x, const float *y, const float *cx,
+                  const float *a, const float *tau, const float *k, float *dx,
+                  float *dy) {
+#pragma omp simd
+    for (int i=0; i<width; i++) {
+      dx[i] = -x[i] + cx[i];
+      dy[i] = -y[i];
+    }
+  }
+};
+
+template <uint8_t width> struct linear : model<2,width,dfun_linear<width>> { };
+
+void foobar() {
+    linear<8> l {4, 5, 6};
+    uint32_t m=2,n=5;
+    float cx1[8], cx2[8];
+    l.step(m, n, cx1, cx2);
 }
 
 } // namespace tvbk
