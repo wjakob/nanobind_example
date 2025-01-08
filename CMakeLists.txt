@@ -35,30 +35,12 @@ find_package(Python 3.8
 # Import nanobind through CMake's find_package mechanism
 find_package(nanobind CONFIG REQUIRED)
 
-# Add our code in src/tvbk.cpp file to a distinct library
-add_library(tvbk
-  STATIC
-  src/tvbk.h
-  src/conn.cpp
-  src/r123.cpp
-  src/matmul.cpp
-  src/ode.c
-)
-set_target_properties(tvbk PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
-# if not CXX is one of (msvc, clang, emscripten) we can enable more flags
-# target_compile_options(tvbk PRIVATE
-#   -O3 -funroll-loops -ffast-math -fopenmp-simd -march=native -mavx2)
-
 # setup binding module
 nanobind_add_module(
   nanobind_example_ext
-  STABLE_ABI NB_STATIC LTO
+  STABLE_ABI NB_STATIC LTO NOMINSIZE
   src/nanobind_example_ext.cpp
 )
-
-# link our code to the binding module
-target_link_libraries(nanobind_example_ext PRIVATE tvbk)
 
 # Install directive for scikit-build-core
 install(TARGETS nanobind_example_ext LIBRARY DESTINATION nanobind_example)

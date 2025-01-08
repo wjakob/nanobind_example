@@ -16,13 +16,6 @@ def test_popcount_randn_perf(benchmark):
 def test_np_randn_perf(benchmark):
     benchmark(np.random.randn, 32, 1024)
 
-def test_mm():
-    A, B, C = np.random.randn(3, 8, 8).astype('f')
-    m.mm8(A, B, C)
-    np.testing.assert_allclose(C, A@B, 1e-6, 1e-6)
-
-
-
 def rand_weights(seed=43, sparsity=0.4, cv=1.0, dt=0.1, horizon=256, num_node=90):
     np.random.seed(seed)
     horizonm1 = horizon - 1
@@ -53,12 +46,19 @@ def base_setup():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
     horizon = 256
     weights, lengths, spw = rand_weights(num_node=num_node, horizon=horizon, dt=dt, cv=cv)
     cx = m.Cx(num_node, horizon)
-    conn = m.Conn(num_node, spw[0].size, *spw)  #, mode=mode)
+    conn = m.Conn(num_node, spw[0].size)  #, mode=mode)
+    conn.weights[:] = spw[0]
+    conn.indices[:] = spw[1]
+    conn.indptr[:] = spw[2]
+    conn.idelays[:] = spw[3]
 
     assert cx.buf.shape == (num_node, horizon)
     # then we can test
-    cx.buf[:] = np.r_[:1.0:1j*num_node *
+    buf_val = np.r_[:1.0:1j*num_node *
                       horizon].reshape(num_node, horizon).astype('f')*4.0
+    cx.buf[:] = buf_val
+    np.testing.assert_equal(buf_val, cx.buf)
+    cx.cx1[:] = cx.cx2[:] = 0.0
 
     # impl simple numpy version
     def make_cfun_np():
@@ -77,15 +77,14 @@ def base_setup():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
 
     return conn, cx, make_cfun_np()
 
-
-# def test_conn_kernels():
-#     connj, cxj, cfun_np = base_setup()  # tvb_kernels.CxMode.CX_J)
-#     # conni, cxi, _ = base_setup(tvb_kernels.CxMode.CX_I)
-#     for t in range(1024):
-#         cx = cfun_np(t)
-#         m.cx_j(cxj, connj, t)
-#         # conni(t)
-#         np.testing.assert_allclose(cx[0], cxj.cx1, 1e-4, 1e-6)
-#         np.testing.assert_allclose(cx[1], cxj.cx2, 1e-4, 1e-6)
-#         # np.testing.assert_allclose(cx[0], cxi.cx1, 1e-4, 1e-6)
-#         # np.testing.assert_allclose(cx[1], cxi.cx2, 1e-4, 1e-6)
+def test_conn_kernels():
+    connj, cxj, cfun_np = base_setup()  # tvb_kernels.CxMode.CX_J)
+    # conni, cxi, _ = base_setup(tvb_kernels.CxMode.CX_I)
+    for t in range(1024):
+        cx = cfun_np(t)
+        m.cx_j(cxj, connj, t)
+        # conni(t)
+        np.testing.assert_allclose(cx[0], cxj.cx1, 1e-4, 1e-6)
+        np.testing.assert_allclose(cx[1], cxj.cx2, 1e-4, 1e-6)
+        # np.testing.assert_allclose(cx[0], cxi.cx1, 1e-4, 1e-6)
+        # np.testing.assert_allclose(cx[1], cxi.cx2, 1e-4, 1e-6)
