@@ -1,3 +1,19 @@
+nbex
+====
+
+Take 2 on automating wheels for all platforms for tvbk.  My local dev setup is
+in VS Code w/ Python, C/C++ extensions, and a venv setup for incremental rebuilds like so
+```bash
+uv venv .venv
+source .venv/bin/activate
+uv pip install nanobind 'scikit-build-core[pyproject]' pytest numpy cibuildwheel
+uv pip install --no-build-isolation -Ceditable.rebuild=true -ve .
+```
+following https://nanobind.readthedocs.io/en/latest/packaging.html#step-5-incremental-rebuilds.
+This enables editing and running the tests directly, with changes to the C++ automatically
+taken into account.
+
+
 nanobind_example
 ================
 
