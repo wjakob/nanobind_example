@@ -18,7 +18,11 @@ static uint64_t INLINE sfc64(uint64_t s[4])
 static float INLINE randn1(uint64_t s[4])
 {
     uint64_t u = sfc64(s);
+#ifdef _MSC_VER
+    double x = __popcnt64(u);
+#else
     double x = __builtin_popcount(u>>32);
+#endif
     x += (uint32_t)u * (1 / 4294967296.);
     x -= 16.5;
     x *= 0.3517262290563295;

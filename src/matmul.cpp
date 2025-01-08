@@ -22,7 +22,11 @@ void tvbk_mm8_ref(float A[N * N], float B[N * N], float C[N * N], float b[N]) {
 
 /* TODO might want INLINE on this */
 void tvbk_mm8_fast(float A[N * N], float B[N * N], float C[N * N], float b[N]) {
+#ifdef _MSC_VER
+#pragma loop(unroll)
+#else
 #pragma GCC unroll(8)
+#endif
   for (int i = 0; i < N; i++) {
     float acc[N], arow[N], brow[N];
     zero8(acc);
@@ -38,53 +42,4 @@ void tvbk_mm8_fast(float A[N * N], float B[N * N], float C[N * N], float b[N]) {
 }
 }
 
-
-/*
-void tvbk_mm8_fast(
-  float A[N*N], float B[N*N], float C[N*N], float b[N])
-{
-#pragma GCC unroll(8)
-  for (int i=0; i<N; i++)
-  {
-    float *acc=C+i*N, arow[N], *Bk=B;
-    zero8(acc);
-    load8(arow, A+i*N);
-    for (int k=0; k<N; k++, Bk+=k*N)
-      ax8(acc, arow[k], Bk);
-  }
-}
-*/
-
-/*
-void fill_test_values(
-  float A[N*N], float B[N*N], float C[N*N], float b[N]
-  )
-{
-  for (int i=0; i<N; i++)
-  {
-    for (int j=0; j<N; j++)
-    {
-      A[i*N+j] = B[j*N+i] = i*N+j;
-      C[i*N+j] = 0;
-    }
-    b[i] = i*1000;
-  }
-}
-
-int main()
-{
-  float A[N*N], B[N*N], C1[N*N], C2[N*N], b[N];
-  fill_test_values(A, B, C1, b);
-  tvbk_mm8_ref(A, B, C1, b);
-  fill_test_values(A, B, C2, b);
-  matmul3(A, B, C2, b);
-
-  for (int i=0; i < (N*N); i++)
-  {
-    if (C1[i] != C2[i])
-    {
-      printf("C1[%d] %f != C2[%d] %f\n", i, C1[i], i, C2[i]);
-    }
-  }
-}
-*/
+// TODO tiled mm for neural ode based on mm8
