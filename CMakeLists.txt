@@ -46,7 +46,7 @@ add_library(tvbk
 )
 set_target_properties(tvbk PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-# XXX enable on gcc/linux for performance
+# if not CXX is one of (msvc, clang, emscripten) we can enable more flags
 # target_compile_options(tvbk PRIVATE
 #   -O3 -funroll-loops -ffast-math -fopenmp-simd -march=native -mavx2)
 

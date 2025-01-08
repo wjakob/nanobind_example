@@ -107,7 +107,6 @@ def base_setup():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
 # def test_conn_kernels():
 #     connj, cxj, cfun_np = base_setup()  # tvb_kernels.CxMode.CX_J)
 #     # conni, cxi, _ = base_setup(tvb_kernels.CxMode.CX_I)
-
 #     for t in range(1024):
 #         cx = cfun_np(t)
 #         m.cx_j(cxj, connj, t)
