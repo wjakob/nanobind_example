@@ -14,6 +14,7 @@ authors = [
 classifiers = [
     "License :: OSI Approved :: BSD License",
 ]
+dependencies = ["numpy"]
 
 [project.urls]
 Homepage = "https://github.com/wjakob/nanobind_example"
@@ -34,7 +35,7 @@ build-verbosity = 1
 
 # Run pytest to ensure that the package was correctly built
 test-command = "pytest {project}/tests"
-test-requires = "pytest"
+test-requires = ["pytest", "numpy", "pytest-benchmark"]
 
 # Don't test Python 3.8 wheels on macOS/arm64
 test-skip="cp38-macosx_*:arm64"
