@@ -2,10 +2,26 @@
 #include <stdint.h>
 #include <math.h>
 
+// at -O3 -fopen-simd, these kernels result in compact asm
 #ifdef _MSC_VER
 #define INLINE __forceinline
+#define kernel(name, expr, ...) \
+template <int width> INLINE static void name (__VA_ARGS__) \
+{ \
+  _Pragma("loop(hint_parallel(8))") \
+  _Pragma("loop(ivdep)") \
+  for (int i=0; i < width; i++) \
+    expr;\
+}
 #else
 #define INLINE __attribute__((always_inline)) inline
+#define kernel(name, expr, args...) \
+template <int width> INLINE static void name (args) \
+{ \
+  _Pragma("omp simd") \
+  for (int i=0; i < width; i++) \
+    expr;\
+}
 #endif
 
 namespace tvbk {
@@ -108,15 +124,6 @@ INLINE void randn(uint64_t *seed, int n, float *out) {
   #pragma omp simd
   for (int i = 0; i < n; i++)
     out[i] = randn1(seed);
-}
-
-// at -O3 -fopen-simd, these kernels result in compact asm
-#define kernel(name, expr, args...) \
-template <int width> INLINE static void name (args) \
-{ \
-  _Pragma("omp simd") \
-  for (int i=0; i < width; i++) \
-    expr;\
 }
 
 /* simple stuff */
