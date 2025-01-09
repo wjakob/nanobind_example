@@ -4,6 +4,7 @@
 
 // at -O3 -fopen-simd, these kernels result in compact asm
 #ifdef _MSC_VER
+#include <intrin.h>
 #define INLINE __forceinline
 #define kernel(name, expr, ...) \
 template <int width> INLINE static void name (__VA_ARGS__) \
