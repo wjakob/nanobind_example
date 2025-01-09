@@ -162,6 +162,8 @@ INLINE static void dot(float *dst, float *x, float *y)
     *dst = acc;
 }
 
+/* WIP
+
 template <uint8_t nsvar, uint8_t width, typename dfun>
 struct model
 {
@@ -221,5 +223,6 @@ void foobar() {
     float cx1[8], cx2[8];
     l.step(m, n, cx1, cx2);
 }
+*/
 
 } // namespace tvbk
