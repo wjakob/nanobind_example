@@ -46,8 +46,8 @@ jobs:
 
     - uses: pypa/cibuildwheel@v2.22
       env:
-        # skip PyPy
-        CIBW_SKIP: 'pp*'
+        # skip stuff where a scipy build is required
+        CIBW_SKIP: 'pp* *i686'
     
     - name: Verify clean directory
       run: git diff --exit-code
