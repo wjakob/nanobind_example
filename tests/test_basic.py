@@ -1,6 +1,7 @@
 import nanobind_example as m
 import numpy as np
 import scipy.sparse
+import pytest
 
 def test_randn():
     batches = 128
@@ -9,10 +10,12 @@ def test_randn():
     np.testing.assert_allclose(out.mean(axis=1), 1/out.shape[1], 0.1, 0.2)
     np.testing.assert_allclose(out.std(axis=1), 1+1/out.shape[1], 0.1, 0.2)
 
+@pytest.mark.benchmark(group='randn')
 def test_popcount_randn_perf(benchmark):
     out = np.zeros((32, 1024), 'f')
     benchmark(m.randn, 42, out.reshape(-1))
 
+@pytest.mark.benchmark(group='randn')
 def test_np_randn_perf(benchmark):
     benchmark(np.random.randn, 32, 1024)
 
@@ -88,3 +91,22 @@ def test_conn_kernels():
         np.testing.assert_allclose(cx[1], cxj.cx2, 1e-4, 1e-6)
         # np.testing.assert_allclose(cx[0], cxi.cx1, 1e-4, 1e-6)
         # np.testing.assert_allclose(cx[1], cxi.cx2, 1e-4, 1e-6)
+
+@pytest.mark.benchmark(group='conn_kernels')
+def test_conn_kernels_cpp(benchmark):
+    connj, cxj, cfun_np = base_setup()
+    def run():
+        for t in range(128):
+            # cx = cfun_np(t)
+            m.cx_j(cxj, connj, t)
+    benchmark(run)
+
+@pytest.mark.benchmark(group='conn_kernels')
+def test_conn_kernels_numpy(benchmark):
+    connj, cxj, cfun_np = base_setup()
+    def run():
+        for t in range(128):
+            cx = cfun_np(t)
+            # m.cx_j(cxj, connj, t)
+    benchmark(run)
+
