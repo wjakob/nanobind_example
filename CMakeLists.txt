@@ -42,5 +42,9 @@ nanobind_add_module(
   src/nanobind_example_ext.cpp
 )
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(nanobind_example_ext PRIVATE -O3 -march=native -ffast-math -fopenmp -funroll-loops -mavx2)
+endif()
+
 # Install directive for scikit-build-core
 install(TARGETS nanobind_example_ext LIBRARY DESTINATION nanobind_example)

@@ -64,4 +64,5 @@ NB_MODULE(nanobind_example_ext, m) {
       },
       "cx"_a, "conn"_a, "t"_a,
       "This function calculates the afferent coupling buffer.");
+
 }
