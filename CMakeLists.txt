@@ -44,9 +44,8 @@ nanobind_add_module(
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   find_package(OpenMP REQUIRED)
-  target_compile_options(nanobind_example_ext PRIVATE -g)# -Og -fopenmp)# -march=native -ffast-math -fopenmp -funroll-loops -mavx2)
+  target_compile_options(nanobind_example_ext PRIVATE -march=native -ffast-math -fopenmp -funroll-loops -mavx2)
   target_link_libraries(nanobind_example_ext PUBLIC OpenMP::OpenMP_CXX)
-  # target_link_libraries(nanobind_example_ext PRIVATE ubsan asan)
 endif()
 # clang: -fno-math-errno -fveclib=libmvec, but no omp on macos
 

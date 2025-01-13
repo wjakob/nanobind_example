@@ -425,7 +425,7 @@ def base_setup_simd_batch():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX
     horizon = 256
     weights, lengths, spw_j = rand_weights(num_node=num_node, horizon=horizon, dt=dt, cv=cv)
     s_w = scipy.sparse.csr_matrix(weights)
-    num_batch = 32
+    num_batch = 64
     cx = m.Cx8s(num_node, horizon, num_batch)
     conn = m.Conn(num_node, s_w.data.size)  #, mode=mode)
     conn.weights[:] = s_w.data.astype(np.float32)
@@ -450,9 +450,10 @@ def base_setup_simd_batch():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX
         assert idelays2.shape == (2, csr_weights.nnz)
 
         def cfun_np(t):
-            _ = cx.buf[csr_weights.indices, (t-idelays2) % horizon]
+            _ = cx.buf[:, csr_weights.indices, (t-idelays2) % horizon]
             _ *= csr_weights.data.reshape(-1, 1)
-            _ = np.add.reduceat(_, csr_weights.indptr[:-1], axis=1)
+            _ = np.add.reduceat(_, csr_weights.indptr[:-1], axis=2)
+            assert _.shape == (num_batch, 2, num_node, 8)
             return _  # (2, num_node, width)
         return cfun_np
 
@@ -464,5 +465,21 @@ def test_basic_simd_batch():
     for t in range(1024):
         cx = cfun_np(t)
         m.cxs8_j(cxpp, connpp, t)
-        np.testing.assert_allclose(cx[0], cxpp.cx1, 1e-4, 1e-6)
-        np.testing.assert_allclose(cx[1], cxpp.cx2, 1e-4, 1e-6)
+        np.testing.assert_allclose(cx[:,0], cxpp.cx1, 1e-4, 1e-6)
+        np.testing.assert_allclose(cx[:,1], cxpp.cx2, 1e-4, 1e-6)
+
+@pytest.mark.benchmark(group='conn_simd_batch')
+def test_conn_simd_batch_cpp(benchmark):
+    connpp, cxpp, cfun_np, ls = base_setup_simd_batch()
+    def run():
+        for t in range(128):
+            m.cxs8_j(cxpp, connpp, t)
+    benchmark(run)
+
+@pytest.mark.benchmark(group='conn_simd_batch')
+def test_conn_simd_batch_numpy(benchmark):
+    connpp, cxpp, cfun_np, ls = base_setup_simd_batch()
+    def run():
+        for t in range(128):
+            cx = cfun_np(t)
+    benchmark(run)

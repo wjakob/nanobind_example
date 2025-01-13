@@ -46,12 +46,13 @@ struct cxb {
       : num_node(num_node), num_time(num_time), cx1(cx1), cx2(cx2), buf(buf) {}
 };
 
-template <int width> struct cxbs : cxb<width> {
-  const uint32_t num_batch;
+template <int width> struct cxbs  {
+  float *cx1, *cx2, *buf;
+  const uint32_t num_node, num_time, num_item=width, num_batch;
   cxbs(const uint32_t num_node, const uint32_t num_time, const uint32_t num_batches)
-      : cxb<width>(num_node, num_time), num_batch(num_batches) {}
-  cxbs(const uint32_t num_node, const uint32_t num_time, const uint32_t num_batches, float *cx1, float *cx2, float *buf)
-      : cxb<width>(num_node, num_time, cx1, cx2, buf), num_batch(num_batches) {}
+      : num_node(num_node), num_time(num_time), num_batch(num_batches),
+        cx1(new float[num_node * width * num_batches]), cx2(new float[num_node * width * num_batches]),
+        buf(new float[num_node * num_time * width * num_batches]) {}
   const cxb<width> batch(const uint32_t i) const {
     return cxb<width>(this->num_node, this->num_time, this->cx1 + i * this->num_node * width,
                       this->cx2 + i * this->num_node * width, this->buf + i * this->num_node * this->num_time * width);
