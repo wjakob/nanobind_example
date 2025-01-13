@@ -39,8 +39,8 @@ struct cxb {
   const uint32_t num_time; // horizon, power of 2
   const uint32_t num_item=width;
   cxb(const uint32_t num_node, const uint32_t num_time)
-      : num_node(num_node), num_time(num_time), cx1(new float[num_node * num_item]),
-        cx2(new float[num_node * num_item]), buf(new float[num_node * num_time * num_item]) {}
+      : num_node(num_node), num_time(num_time), cx1(new float[num_node * width]),
+        cx2(new float[num_node * width]), buf(new float[num_node * num_time * width]) {}
 };
 
 typedef cxb<1> cx;
@@ -179,7 +179,7 @@ INLINE static void dot(float *dst, float *x, float *y)
 // setup pointers b1 & b2 to delay_buffer to read from
 template <int width=8>
 static void INLINE prep_ij(
-  const cx &cx, const conn &c,
+  const cxb<width> &cx, const conn &c,
   const int i_time, const int nz, float **b1, float **b2, float *w)
 {
   uint32_t H = cx.num_time, Hm1 = H - 1;
@@ -197,7 +197,7 @@ static void INLINE prep_ij(
   // TODO switch to width instead of 4 fixed
 template <int width=8>
   static void INLINE prep4_ij(
-  const cx &cx, const conn &c,
+  const cxb<width> &cx, const conn &c,
   const int i_time, const int nz, float **b1, float **b2, float *w)
 {
   uint32_t H = cx.num_time, Hm1 = H - 1;
@@ -218,7 +218,7 @@ template <int width=8>
 // do one non-zero increment for cx1 & cx2
 template <int width=8>
 static void INLINE apply_ij(
-  const cx &cx, const conn &c,
+  const cxb<width> &cx, const conn &c,
   const int nz, const int i_time, float *cx1, float *cx2)
 {
   float *b1, *b2, w;
@@ -230,7 +230,7 @@ static void INLINE apply_ij(
 // same but for 4 at once
 template <int width=8>
 static void INLINE apply4_ij(
-  const cx &cx, const conn &c,
+  const cxb<width> &cx, const conn &c,
   const int nz, const int i_time, float *cx1, float *cx2)
 {
   float *b1[4], *b2[4], w[4];
@@ -247,7 +247,7 @@ static void INLINE apply4_ij(
 
 template <int width=8>
 static void INLINE apply_all_node(
-  const cx &cx, const conn &c,
+  const cxb<width> &cx, const conn &c,
   int i_time, int i_node, float *cx1, float *cx2) {
   zero<width>(cx1);
   zero<width>(cx2);
@@ -265,7 +265,7 @@ static void INLINE apply_all_node(
 
 template <int width=8>
 static void INLINE cx_j_b(
-  const cx &cx, const conn &c, uint32_t t) {
+  const cxb<width> &cx, const conn &c, uint32_t t) {
   float cx1[width], cx2[width];
   for (uint32_t i = 0; i < cx.num_node; i++) {
     apply_all_node<width>(cx, c, t, i, cx1, cx2);

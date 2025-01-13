@@ -251,13 +251,14 @@ def base_setup_simd():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
     dt = 0.1
     num_node = 90
     horizon = 256
-    weights, lengths, spw = rand_weights(num_node=num_node, horizon=horizon, dt=dt, cv=cv)
+    weights, lengths, _ = rand_weights(num_node=num_node, horizon=horizon, dt=dt, cv=cv)
+    s_w = scipy.sparse.csr_matrix(weights)
     cx = m.Cx8(num_node, horizon)
-    conn = m.Conn(num_node, spw[0].size)  #, mode=mode)
-    conn.weights[:] = spw[0]
-    conn.indices[:] = spw[1]
-    conn.indptr[:] = spw[2]
-    conn.idelays[:] = spw[3]
+    conn = m.Conn(num_node, s_w.data.size)  #, mode=mode)
+    conn.weights[:] = s_w.data.astype(np.float32)
+    conn.indices[:] = s_w.indices.astype(np.uint32)
+    conn.indptr[:] = s_w.indptr.astype(np.uint32)
+    conn.idelays[:] = (lengths[weights != 0]/cv/dt).astype(np.uint32)+2
 
     assert cx.buf.shape == (num_node, horizon, 8)
     # then we can test
@@ -267,5 +268,26 @@ def base_setup_simd():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
     np.testing.assert_equal(buf_val, cx.buf)
     cx.cx1[:] = cx.cx2[:] = 0.0
 
+    # impl simple numpy version
+    def make_cfun_np():
+        zero_mask = weights == 0
+        csr_weights = scipy.sparse.csr_matrix(weights)
+        idelays = (lengths[~zero_mask]/cv/dt).astype('i')+2
+        idelays2 = -horizon + np.c_[idelays, idelays-1].T
+        assert idelays2.shape == (2, csr_weights.nnz)
+
+        def cfun_np(t):
+            _ = cx.buf[csr_weights.indices, (t-idelays2) % horizon]
+            _ *= csr_weights.data.reshape(-1, 1)
+            _ = np.add.reduceat(_, csr_weights.indptr[:-1], axis=1)
+            return _  # (2, num_node, width)
+        return cfun_np
+    return conn, cx, make_cfun_np()
+
 def test_basic_simd():
-    base_setup_simd()
+    connpp, cxpp, cfun_np = base_setup_simd()
+    for t in range(1024):
+        cx = cfun_np(t)
+        m.cx_j8(cxpp, connpp, t)
+        np.testing.assert_allclose(cx[0], cxpp.cx1, 1e-4, 1e-6)
+        np.testing.assert_allclose(cx[1], cxpp.cx2, 1e-4, 1e-6)

@@ -84,7 +84,7 @@ NB_MODULE(nanobind_example_ext, m) {
 
   m.def(
       "cx_j8",
-      [](const tvbk::cx &cx8, const tvbk::conn &conn, uint32_t t) {
+      [](const tvbk::cx8 &cx8, const tvbk::conn &conn, uint32_t t) {
         tvbk::cx_j_b<8>(cx8, conn, t);
       },
       "cx8"_a, "conn"_a, "t"_a,
