@@ -414,3 +414,55 @@ def test_conn_simd_numbaj(benchmark):
         for t in range(128):
             cx = cfun_nbj(t)
     benchmark(run)
+
+
+# now batches of simd
+
+def base_setup_simd_batch():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
+    cv = 1.0
+    dt = 0.1
+    num_node = 90
+    horizon = 256
+    weights, lengths, spw_j = rand_weights(num_node=num_node, horizon=horizon, dt=dt, cv=cv)
+    s_w = scipy.sparse.csr_matrix(weights)
+    num_batch = 32
+    cx = m.Cx8s(num_node, horizon, num_batch)
+    conn = m.Conn(num_node, s_w.data.size)  #, mode=mode)
+    conn.weights[:] = s_w.data.astype(np.float32)
+    conn.indices[:] = s_w.indices.astype(np.uint32)
+    conn.indptr[:] = s_w.indptr.astype(np.uint32)
+    conn.idelays[:] = (lengths[weights != 0]/cv/dt).astype(np.uint32)+2
+
+    assert cx.buf.shape == (num_batch, num_node, horizon, 8)
+    # then we can test
+    buf_val = np.r_[:1.0:1j*num_batch*num_node *
+                      horizon * 8].reshape(num_batch, num_node, horizon, 8).astype('f')*4.0
+    cx.buf[:] = buf_val
+    np.testing.assert_equal(buf_val, cx.buf)
+    cx.cx1[:] = cx.cx2[:] = 0.0
+
+    # impl simple numpy version
+    def make_cfun_np():
+        zero_mask = weights == 0
+        csr_weights = scipy.sparse.csr_matrix(weights)
+        idelays = (lengths[~zero_mask]/cv/dt).astype('i')+2
+        idelays2 = -horizon + np.c_[idelays, idelays-1].T
+        assert idelays2.shape == (2, csr_weights.nnz)
+
+        def cfun_np(t):
+            _ = cx.buf[csr_weights.indices, (t-idelays2) % horizon]
+            _ *= csr_weights.data.reshape(-1, 1)
+            _ = np.add.reduceat(_, csr_weights.indptr[:-1], axis=1)
+            return _  # (2, num_node, width)
+        return cfun_np
+
+    return conn, cx, make_cfun_np(), locals()
+
+
+def test_basic_simd_batch():
+    connpp, cxpp, cfun_np, ls = base_setup_simd_batch()
+    for t in range(1024):
+        cx = cfun_np(t)
+        m.cxs8_j(cxpp, connpp, t)
+        np.testing.assert_allclose(cx[0], cxpp.cx1, 1e-4, 1e-6)
+        np.testing.assert_allclose(cx[1], cxpp.cx2, 1e-4, 1e-6)

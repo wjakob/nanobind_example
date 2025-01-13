@@ -41,10 +41,26 @@ struct cxb {
   cxb(const uint32_t num_node, const uint32_t num_time)
       : num_node(num_node), num_time(num_time), cx1(new float[num_node * width]),
         cx2(new float[num_node * width]), buf(new float[num_node * num_time * width]) {}
+  // init from existing buffers
+  cxb(const uint32_t num_node, const uint32_t num_time, float *cx1, float *cx2, float *buf)
+      : num_node(num_node), num_time(num_time), cx1(cx1), cx2(cx2), buf(buf) {}
+};
+
+template <int width> struct cxbs : cxb<width> {
+  const uint32_t num_batch;
+  cxbs(const uint32_t num_node, const uint32_t num_time, const uint32_t num_batches)
+      : cxb<width>(num_node, num_time), num_batch(num_batches) {}
+  cxbs(const uint32_t num_node, const uint32_t num_time, const uint32_t num_batches, float *cx1, float *cx2, float *buf)
+      : cxb<width>(num_node, num_time, cx1, cx2, buf), num_batch(num_batches) {}
+  const cxb<width> batch(const uint32_t i) const {
+    return cxb<width>(this->num_node, this->num_time, this->cx1 + i * this->num_node * width,
+                      this->cx2 + i * this->num_node * width, this->buf + i * this->num_node * this->num_time * width);
+  }
 };
 
 typedef cxb<1> cx;
 typedef cxb<8> cx8; // common case: 8-wide SIMD
+typedef cxbs<8> cx8s;
 
 struct conn {
   const uint32_t num_node;
@@ -272,6 +288,14 @@ static void INLINE cx_j_b(
     load<width>(cx.cx1 + i * width, cx1);
     load<width>(cx.cx2 + i * width, cx2);
   }
+}
+
+template <int width=8>
+static void INLINE cx_j_bs(
+  const cxbs<width> &cx, const conn &c, uint32_t t) {
+#pragma omp parallel for
+  for (uint32_t i = 0; i < cx.num_batch; i++)
+    cx_j_b<width>(cx.batch(i), c, t);
 }
 
 /* WIP

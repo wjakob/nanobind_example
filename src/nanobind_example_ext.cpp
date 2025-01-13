@@ -8,6 +8,7 @@ using namespace nb::literals;
 typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1>, nb::c_contig> fvec;
 typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1,-1>, nb::c_contig> fmat;
 typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1,-1,-1>, nb::c_contig> farr3;
+typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1,-1,-1,-1>, nb::c_contig> farr4;
 typedef nb::ndarray<uint32_t, nb::numpy, nb::device::cpu, nb::shape<-1>, nb::c_contig> uvec;
 
 NB_MODULE(nanobind_example_ext, m) {
@@ -49,7 +50,21 @@ NB_MODULE(nanobind_example_ext, m) {
       .def_prop_ro("cx2",
                    [](tvbk::cx8 &cx) { return fmat(cx.cx2, {cx.num_node, cx.num_item}); });
 
-
+  nb::class_<tvbk::cx8s>(m, "Cx8s")
+      .def(nb::init<uint32_t, uint32_t, uint32_t>(), "num_node"_a, "num_time"_a, "num_batches"_a)
+      .def_ro("num_node", &tvbk::cx8s::num_node)
+      .def_ro("num_time", &tvbk::cx8s::num_time)
+      .def_ro("num_item", &tvbk::cx8s::num_item)
+      .def_ro("num_batch", &tvbk::cx8s::num_batch)
+      .def_prop_ro("buf",
+                   [](tvbk::cx8s &cx) {
+                     return farr4(cx.buf, {cx.num_batch, cx.num_node, cx.num_time, cx.num_item});
+                   })
+      .def_prop_ro("cx1",
+                   [](tvbk::cx8s &cx) { return farr3(cx.cx1, {cx.num_batch, cx.num_node, cx.num_item}); })
+      .def_prop_ro("cx2",
+                   [](tvbk::cx8s &cx) { return farr3(cx.cx2, {cx.num_batch, cx.num_node, cx.num_item}); })
+    ;
 
   nb::class_<tvbk::conn>(m, "Conn")
       .def(nb::init<uint32_t, uint32_t>(), "num_node"_a, "num_nonzero"_a)
@@ -89,5 +104,12 @@ NB_MODULE(nanobind_example_ext, m) {
       },
       "cx8"_a, "conn"_a, "t"_a,
       "This function calculates batched afferent coupling buffer.");
+
+  m.def("cxs8_j",
+        [](const tvbk::cx8s &cxs8, const tvbk::conn &conn, uint32_t t) {
+          tvbk::cx_j_bs<8>(cxs8, conn, t);
+        },
+        "cxs8"_a, "conn"_a, "t"_a,
+        "This function calculates many batched afferent coupling buffer.");
 
 }
