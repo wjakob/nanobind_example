@@ -117,6 +117,7 @@ def base_setup():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
         def f(t):
             kernel(t, cx, buf_val, *spw)
             return cx
+        f(0)  # warmup
         return f
 
     return conn, cx, make_cfun_np(), make_jax(), make_numba()
@@ -236,3 +237,29 @@ def test_randn():
     np.testing.assert_allclose(out.mean(axis=1), 1/out.shape[1], 0.1, 0.2)
     np.testing.assert_allclose(out.std(axis=1), 1+1/out.shape[1], 0.1, 0.2)
 
+
+
+# testing simd width
+def base_setup_simd():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
+    cv = 1.0
+    dt = 0.1
+    num_node = 90
+    horizon = 256
+    weights, lengths, spw = rand_weights(num_node=num_node, horizon=horizon, dt=dt, cv=cv)
+    cx = m.Cx8(num_node, horizon)
+    conn = m.Conn(num_node, spw[0].size)  #, mode=mode)
+    conn.weights[:] = spw[0]
+    conn.indices[:] = spw[1]
+    conn.indptr[:] = spw[2]
+    conn.idelays[:] = spw[3]
+
+    assert cx.buf.shape == (num_node, horizon, 8)
+    # then we can test
+    buf_val = np.r_[:1.0:1j*num_node *
+                      horizon * 8].reshape(num_node, horizon, 8).astype('f')*4.0
+    cx.buf[:] = buf_val
+    np.testing.assert_equal(buf_val, cx.buf)
+    cx.cx1[:] = cx.cx2[:] = 0.0
+
+def test_basic_simd():
+    base_setup_simd()

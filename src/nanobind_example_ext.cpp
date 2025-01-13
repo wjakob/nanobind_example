@@ -7,6 +7,7 @@ namespace nb = nanobind;
 using namespace nb::literals;
 typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1>, nb::c_contig> fvec;
 typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1,-1>, nb::c_contig> fmat;
+typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1,-1,-1>, nb::c_contig> farr3;
 typedef nb::ndarray<uint32_t, nb::numpy, nb::device::cpu, nb::shape<-1>, nb::c_contig> uvec;
 
 NB_MODULE(nanobind_example_ext, m) {
@@ -33,6 +34,22 @@ NB_MODULE(nanobind_example_ext, m) {
                    [](tvbk::cx &cx) { return fvec(cx.cx1, {cx.num_node}); })
       .def_prop_ro("cx2",
                    [](tvbk::cx &cx) { return fvec(cx.cx2, {cx.num_node}); });
+
+  nb::class_<tvbk::cx8>(m, "Cx8")
+      .def(nb::init<uint32_t, uint32_t>(), "num_node"_a, "num_time"_a)
+      .def_ro("num_node", &tvbk::cx8::num_node)
+      .def_ro("num_time", &tvbk::cx8::num_time)
+      .def_ro("num_item", &tvbk::cx8::num_item)
+      .def_prop_ro("buf",
+                   [](tvbk::cx8 &cx) {
+                     return fmat(cx.buf, {cx.num_node, cx.num_time, cx.num_item});
+                   })
+      .def_prop_ro("cx1",
+                   [](tvbk::cx8 &cx) { return fmat(cx.cx1, {cx.num_node, cx.num_item}); })
+      .def_prop_ro("cx2",
+                   [](tvbk::cx8 &cx) { return fmat(cx.cx2, {cx.num_node, cx.num_item}); });
+
+
 
   nb::class_<tvbk::conn>(m, "Conn")
       .def(nb::init<uint32_t, uint32_t>(), "num_node"_a, "num_nonzero"_a)
@@ -64,5 +81,13 @@ NB_MODULE(nanobind_example_ext, m) {
       },
       "cx"_a, "conn"_a, "t"_a,
       "This function calculates the afferent coupling buffer.");
+
+  m.def(
+      "cx_j8",
+      [](const tvbk::cx &cx8, const tvbk::conn &conn, uint32_t t) {
+        tvbk::cx_j_b<8>(cx8, conn, t);
+      },
+      "cx8"_a, "conn"_a, "t"_a,
+      "This function calculates batched afferent coupling buffer.");
 
 }
