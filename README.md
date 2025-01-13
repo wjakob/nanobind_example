@@ -7,7 +7,7 @@ in VS Code w/ Python, C/C++ extensions, and a venv setup for incremental rebuild
 rm -rf build env
 uv venv env
 source env/bin/activate
-uv pip install nanobind 'scikit-build-core[pyproject]' pytest pytest-benchmark numpy numba jax cibuildwheel scipy 
+uv pip install nanobind 'scikit-build-core[pyproject]' pytest pytest-benchmark numpy numba jax mako cibuildwheel scipy 
 uv pip install --no-build-isolation -Ceditable.rebuild=true -ve .
 ```
 following https://nanobind.readthedocs.io/en/latest/packaging.html#step-5-incremental-rebuilds.
