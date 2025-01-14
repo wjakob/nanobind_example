@@ -1,4 +1,4 @@
-import nanobind_example as m
+import tvbk as m
 import numpy as np
 import scipy.sparse
 import pytest
@@ -71,79 +71,19 @@ def base_setup():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
             return _  # (2, num_node)
         return cfun_np
 
-    def make_jax():
-        try:
-            import jax, jax.numpy as jp # noqa
-        except ImportError:
-            return None
-        horizonm1 = horizon - 1
-        data, indices, indptr, idelays = spw
-        j_indices = jp.array(indices)
-        j_weights = jp.array(data)
-        j_indptr = jp.array(indptr)
-        buffer = jp.array(buf_val)
-        assert idelays.max() < horizon-2
-        idelays2 = jp.array(horizon + np.c_[idelays, idelays-1].T)        
-        _csr_rows = np.concatenate([i*np.ones(n, 'i')
-                                    for i, n in enumerate(np.diff(indptr))])
-        j_csr_rows = jp.array(_csr_rows)        
-        def f(t):
-            wxij = j_weights * buffer[j_indices, (t-idelays2)&horizonm1]
-            cx = jp.zeros((2, num_node))
-            cx = cx.at[:, j_csr_rows].add(wxij)
-            return cx
-        f = jax.jit(f)
-        f(0)  # warmup
-        return f
-    
-    def make_numba():
-        try:
-            import numba
-        except ImportError:
-            return None
-        cx = np.zeros((2, num_node), 'f')
-        @numba.njit(fastmath=True)
-        def kernel(t, cx, buf, data, indices, indptr, idelays):
-            num_node = cx.shape[1]
-            horizon = buf.shape[1]
-            horizonm1 = horizon - 1
-            for i in range(num_node):
-                cx[0,i] = cx[1,i] = numba.float32(0.0)
-            for i in range(num_node):
-                b = buf[i]
-                th = numba.uint32(t + horizon)
-                for j in range(indptr[i], indptr[i+1]):
-                    i = indices[j]
-                    w = data[j]
-                    d = idelays[j]
-                    p1 = (th - d) & horizonm1
-                    p2 = (th - d + 1) & horizonm1
-                    cx[0, i] += w * b[p1]
-                    cx[1, i] += w * b[p2]
-        def f(t):
-            kernel(t, cx, buf_val, *spw)
-            return cx
-        f(0)  # warmup
-        return f
-
-    return conn, cx, make_cfun_np(), make_jax(), make_numba()
+    return conn, cx, make_cfun_np()
 
 def test_conn_kernels():
-    connj, cxj, cfun_np, cfun_jax, cfun_numba = base_setup()  # tvb_kernels.CxMode.CX_J)
+    connj, cxj, cfun_np = base_setup()  # tvb_kernels.CxMode.CX_J)
     for t in range(1024):
         cx = cfun_np(t)
         m.cx_j(cxj, connj, t)
-        cx2 = cfun_jax(t)
-        cx3 = cfun_numba(t)
         np.testing.assert_allclose(cx[0], cxj.cx1, 1e-4, 1e-6)
         np.testing.assert_allclose(cx[1], cxj.cx2, 1e-4, 1e-6)
-        # np.testing.assert_allclose(cx3, cx, 2, 0.1)
-        # jax code is transposed, ignore errors for now
-        # np.testing.assert_allclose(cx2, cx, 1e-4, 1e-6)
 
 @pytest.mark.benchmark(group='conn_kernels')
 def test_conn_cpp(benchmark):
-    connj, cxj, cfun_np, cfun_jax, cfun_numba = base_setup()
+    connj, cxj, cfun_np,  = base_setup()
     def run():
         for t in range(128):
             m.cx_j(cxj, connj, t)
@@ -151,85 +91,12 @@ def test_conn_cpp(benchmark):
 
 @pytest.mark.benchmark(group='conn_kernels')
 def test_conn_numpy(benchmark):
-    connj, cxj, cfun_np, cfun_jax, cfun_numba = base_setup()
+    connj, cxj, cfun_np,  = base_setup()
     def run():
         for t in range(128):
             cx = cfun_np(t)
     benchmark(run)
 
-@pytest.mark.benchmark(group='conn_kernels')
-def test_conn_jax(benchmark):
-    connj, cxj, cfun_np, cfun_jax, cfun_numba = base_setup()
-    def run():
-        for t in range(128):
-            cx = cfun_jax(t)
-    benchmark(run)
-
-@pytest.mark.benchmark(group='conn_kernels')
-def test_conn_numba(benchmark):
-    connj, cxj, cfun_np, cfun_jax, cfun_numba = base_setup()
-    def run():
-        for t in range(128):
-            cx = cfun_numba(t)
-    benchmark(run)
-
-
-try:
-    import numba
-    """
-    INLINE uint64_t sfc64(uint64_t s[4]) {
-    uint64_t r = s[0] + s[1] + s[3]++;
-    s[0] = (s[1] >> 11) ^ s[1];
-    s[1] = (s[2] << 3) + s[2];
-    s[2] = r + (s[2] << 24 | s[2] >> 40);
-    return r;
-    }
-    """
-    @numba.njit(fastmath=True)
-    def sfc64(s):
-        r = s[0] + s[1] + s[3]
-        s[3] += 1
-        s[0] = (s[1] >> 11) ^ s[1]
-        s[1] = (s[2] << 3) + s[2]
-        s[2] = r + (s[2] << 24 | s[2] >> 40)
-        return r
-    """
-    INLINE float randn1(uint64_t s[4]) {
-    uint64_t u = sfc64(s);
-    double x = __builtin_popcount(u >> 32);
-    x += (uint32_t)u * (1 / 4294967296.);
-    x -= 16.5;
-    x *= 0.3517262290563295;
-    return (float)x;
-    }
-    """
-    @numba.njit(numba.uint64(numba.uint64))
-    def popcount(x): 
-        b=0
-        while(x > 0):
-            x &= x - numba.uint64(1)   
-            b+=1
-        return b
-    @numba.njit(fastmath=True)
-    def randn1(s):
-        u = sfc64(s)
-        x = numba.float64(popcount(u >> 32))
-        x += numba.uint32(u) * numba.float64(1 / 4294967296.)
-        x -= numba.float64(16.5)
-        x *= numba.float64(0.3517262290563295)
-        return numba.float32(x)
-    @numba.njit(fastmath=True)
-    def randnpc(s, out):
-        for i in range(out.size):
-            out[i] = randn1(s)
-    @pytest.mark.benchmark(group='randn')
-    def test_nbrandnpc_perf(benchmark):
-        seed = np.zeros(4, np.uint64)
-        seed[:] = 42
-        out = np.zeros((32, 1024), 'f')
-        benchmark(randnpc, seed, out.reshape(-1))
-except ImportError:
-    pass
 
 def test_randn():
     batches = 128
@@ -238,15 +105,8 @@ def test_randn():
     np.testing.assert_allclose(out.mean(axis=1), 1/out.shape[1], 0.1, 0.2)
     np.testing.assert_allclose(out.std(axis=1), 1+1/out.shape[1], 0.1, 0.2)
 
-    seed = np.zeros(4, np.uint64)
-    seed[:] = 42
-    out[:] = 0
-    randnpc(seed, out.reshape(-1))
-    np.testing.assert_allclose(out.mean(axis=1), 1/out.shape[1], 0.1, 0.2)
-    np.testing.assert_allclose(out.std(axis=1), 1+1/out.shape[1], 0.1, 0.2)
 
-# testing simd width
-def base_setup_simd():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
+def base_setup_simd():
     cv = 1.0
     dt = 0.1
     num_node = 90
@@ -284,108 +144,19 @@ def base_setup_simd():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
             return _  # (2, num_node, width)
         return cfun_np
 
-
-    def make_numba(mode):
-        try:
-            import numba, mako
-        except ImportError:
-            return None
-        # generate source via mako template
-        from mako.template import Template
-        tmpl_j = Template(text=
-r'''import numba
-@numba.njit(fastmath=True)
-def kernel(t, cx, buf, data, indices, indptr, idelays):
-    num_node = cx.shape[1]
-    horizon = buf.shape[1]
-    horizonm1 = horizon - 1
-    assert cx.shape[2] == 8
-    assert buf.shape[2] == 8
-    for i in range(num_node):
-% for l in range(8):
-        cx[0,i,${l}] = cx[1,i,${l}] = numba.float32(0.0)
-% endfor
-    for i in range(num_node):
-        b = buf[i]
-        th = numba.uint32(t + horizon)
-        for j in range(indptr[i], indptr[i+1]):
-            i = indices[j]
-            w = data[j]
-            d = idelays[j]
-            p1 = (th - d) & horizonm1
-            p2 = (th - d + 1) & horizonm1
-% for l in range(8):
-            cx[0, i, ${l}] += w * b[p1, ${l}]
-            cx[1, i, ${l}] += w * b[p2, ${l}]
-% endfor
-''')
-        tmpl_i = Template(text=
-r'''import numba
-@numba.njit(fastmath=True)
-def kernel(t, cx, buf, data, indices, indptr, idelays):
-    num_node = cx.shape[1]
-    horizon = buf.shape[1]
-    horizonm1 = horizon - 1
-    assert cx.shape[2] == 8
-    assert buf.shape[2] == 8
-    for i in range(num_node):
-% for l in range(8):
-        cx_0_${l} = cx_1_${l} = numba.float32(0.0)
-% endfor
-        th = numba.uint32(t + horizon)
-        for j in range(indptr[i], indptr[i+1]):
-            ii = indices[j]
-            w = data[j]
-            d = idelays[j]
-            p1 = (th - d) & horizonm1
-            p2 = (th - d + 1) & horizonm1
-% for l in range(8):
-            cx_0_${l} += w * buf[ii, p1, ${l}]
-            cx_1_${l} += w * buf[ii, p2, ${l}]
-% endfor
-% for l in range(8):
-        cx[0, i, ${l}] = cx_0_${l}
-        cx[1, i, ${l}] = cx_1_${l}
-% endfor
-''')
-        if mode == 'i':
-            src = tmpl_i.render()
-            loc = {}
-            exec(src, loc)
-            kernel = loc['kernel']
-            cx = np.zeros((2, num_node, 8), 'f')
-            def f(t):
-                kernel(t, cx, buf_val, *spw_i)
-                return cx
-        elif mode == 'j':
-            src = tmpl_j.render()
-            loc = {}
-            exec(src, loc)
-            kernel = loc['kernel']
-            cx = np.zeros((2, num_node, 8), 'f')
-            def f(t):
-                kernel(t, cx, buf_val, *spw_j)
-                return cx
-        f(0)  # warmup
-        return f
-    return conn, cx, make_cfun_np(), make_numba(mode='i'), make_numba(mode='j')
+    return conn, cx, make_cfun_np()
 
 def test_basic_simd():
-    connpp, cxpp, cfun_np, cfun_nbi, cfun_nbj = base_setup_simd()
+    connpp, cxpp, cfun_np = base_setup_simd()
     for t in range(1024):
         cx = cfun_np(t)
         m.cx_j8(cxpp, connpp, t)
-        cx2 = cfun_nbi(t)
-        cx3 = cfun_nbj(t)
         np.testing.assert_allclose(cx[0], cxpp.cx1, 1e-4, 1e-6)
         np.testing.assert_allclose(cx[1], cxpp.cx2, 1e-4, 1e-6)
-        np.testing.assert_allclose(cx2, cx, 1e-4, 1e-6)
-        np.testing.assert_allclose(cx3, cx, 1e-4, 1e-6)
-
 
 @pytest.mark.benchmark(group='conn_simd')
 def test_conn_simd_cpp(benchmark):
-    connpp, cxpp, cfun_np, cfun_nbi, cfun_nbj = base_setup_simd()
+    connpp, cxpp, cfun_np = base_setup_simd()
     def run():
         for t in range(128):
             m.cx_j8(cxpp, connpp, t)
@@ -393,39 +164,21 @@ def test_conn_simd_cpp(benchmark):
 
 @pytest.mark.benchmark(group='conn_simd')
 def test_conn_simd_numpy(benchmark):
-    connpp, cxpp, cfun_np, cfun_nbi, cfun_nbj = base_setup_simd()
+    connpp, cxpp, cfun_np = base_setup_simd()
     def run():
         for t in range(128):
             cx = cfun_np(t)
     benchmark(run)
 
-@pytest.mark.benchmark(group='conn_simd')
-def test_conn_simd_numbai(benchmark):
-    connpp, cxpp, cfun_np, cfun_nbi, cfun_nbj = base_setup_simd()
-    def run():
-        for t in range(128):
-            cx = cfun_nbi(t)
-    benchmark(run)
-
-@pytest.mark.benchmark(group='conn_simd')
-def test_conn_simd_numbaj(benchmark):
-    connpp, cxpp, cfun_np, cfun_nbi, cfun_nbj = base_setup_simd()
-    def run():
-        for t in range(128):
-            cx = cfun_nbj(t)
-    benchmark(run)
-
-
 # now batches of simd
-
-def base_setup_simd_batch():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
+def base_setup_simd_batch():
     cv = 1.0
     dt = 0.1
     num_node = 90
     horizon = 256
     weights, lengths, spw_j = rand_weights(num_node=num_node, horizon=horizon, dt=dt, cv=cv)
     s_w = scipy.sparse.csr_matrix(weights)
-    num_batch = 64
+    num_batch = 4
     cx = m.Cx8s(num_node, horizon, num_batch)
     conn = m.Conn(num_node, s_w.data.size)  #, mode=mode)
     conn.weights[:] = s_w.data.astype(np.float32)

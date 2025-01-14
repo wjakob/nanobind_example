@@ -9,3 +9,6 @@ build
 .vs
 env
 .cache
+*.db
+_output
+wheelhouse
