@@ -11,7 +11,7 @@ typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1,-1,-1>, nb::
 typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1,-1,-1,-1>, nb::c_contig> farr4;
 typedef nb::ndarray<uint32_t, nb::numpy, nb::device::cpu, nb::shape<-1>, nb::c_contig> uvec;
 
-NB_MODULE(nanobind_example_ext, m) {
+NB_MODULE(tvbk_ext, m) {
 
   m.def(
       "randn",

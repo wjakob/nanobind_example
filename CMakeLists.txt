@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15...3.26)
 
-project(nanobind_example LANGUAGES CXX)
+project(tvbk LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -37,9 +37,9 @@ find_package(nanobind CONFIG REQUIRED)
 
 # setup binding module
 nanobind_add_module(
-  nanobind_example_ext
+  tvbk_ext
   STABLE_ABI NB_STATIC LTO NOMINSIZE
-  src/nanobind_example_ext.cpp
+  src/tvbk_ext.cpp
 )
 
 # if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -50,4 +50,4 @@ nanobind_add_module(
 # clang: -fno-math-errno -fveclib=libmvec, but no omp on macos
 
 # Install directive for scikit-build-core
-install(TARGETS nanobind_example_ext LIBRARY DESTINATION nanobind_example)
+install(TARGETS tvbk_ext LIBRARY DESTINATION tvbk)

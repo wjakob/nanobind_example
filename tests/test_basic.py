@@ -1,4 +1,4 @@
-import nanobind_example as m
+import tvbk as m
 import numpy as np
 import scipy.sparse
 import pytest
@@ -83,7 +83,7 @@ def test_conn_kernels():
 
 @pytest.mark.benchmark(group='conn_kernels')
 def test_conn_cpp(benchmark):
-    connj, cxj, cfun_np = base_setup()
+    connj, cxj, cfun_np,  = base_setup()
     def run():
         for t in range(128):
             m.cx_j(cxj, connj, t)
@@ -91,7 +91,7 @@ def test_conn_cpp(benchmark):
 
 @pytest.mark.benchmark(group='conn_kernels')
 def test_conn_numpy(benchmark):
-    connj, cxj, cfun_np = base_setup()
+    connj, cxj, cfun_np,  = base_setup()
     def run():
         for t in range(128):
             cx = cfun_np(t)
