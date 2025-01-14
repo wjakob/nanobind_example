@@ -42,11 +42,11 @@ nanobind_add_module(
   src/nanobind_example_ext.cpp
 )
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  find_package(OpenMP REQUIRED)
-  target_compile_options(nanobind_example_ext PRIVATE -march=native -ffast-math -fopenmp -funroll-loops -mavx2)
-  target_link_libraries(nanobind_example_ext PUBLIC OpenMP::OpenMP_CXX)
-endif()
+# if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+#   find_package(OpenMP REQUIRED)
+#   target_compile_options(nanobind_example_ext PRIVATE -march=native -ffast-math -fopenmp -funroll-loops -mavx2)
+#   target_link_libraries(nanobind_example_ext PUBLIC OpenMP::OpenMP_CXX)
+# endif()
 # clang: -fno-math-errno -fveclib=libmvec, but no omp on macos
 
 # Install directive for scikit-build-core

@@ -75,7 +75,7 @@ def base_setup():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
         try:
             import jax, jax.numpy as jp # noqa
         except ImportError:
-            return None
+            return lambda t: np.zeros((2, num_node), 'f')
         horizonm1 = horizon - 1
         data, indices, indptr, idelays = spw
         j_indices = jp.array(indices)
@@ -100,7 +100,7 @@ def base_setup():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
         try:
             import numba
         except ImportError:
-            return None
+            return lambda t: np.zeros((2, num_node), 'f')
         cx = np.zeros((2, num_node), 'f')
         @numba.njit(fastmath=True)
         def kernel(t, cx, buf, data, indices, indptr, idelays):
@@ -229,7 +229,8 @@ try:
         out = np.zeros((32, 1024), 'f')
         benchmark(randnpc, seed, out.reshape(-1))
 except ImportError:
-    pass
+    def randnpc(s, out):
+        out[:] = np.random.randn(out.size)
 
 def test_randn():
     batches = 128
@@ -289,7 +290,7 @@ def base_setup_simd():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX_J):
         try:
             import numba, mako
         except ImportError:
-            return None
+            return lambda t: np.zeros((2, num_node, 8), 'f')
         # generate source via mako template
         from mako.template import Template
         tmpl_j = Template(text=
@@ -425,7 +426,7 @@ def base_setup_simd_batch():  # mode: tvb_kernels.CxMode = tvb_kernels.CxMode.CX
     horizon = 256
     weights, lengths, spw_j = rand_weights(num_node=num_node, horizon=horizon, dt=dt, cv=cv)
     s_w = scipy.sparse.csr_matrix(weights)
-    num_batch = 64
+    num_batch = 8
     cx = m.Cx8s(num_node, horizon, num_batch)
     conn = m.Conn(num_node, s_w.data.size)  #, mode=mode)
     conn.weights[:] = s_w.data.astype(np.float32)

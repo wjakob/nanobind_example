@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - master
+      - fix-ci
 
 jobs:
   build:
@@ -31,7 +32,7 @@ jobs:
 
     - name: Build and install
       run: |
-        python -m pip install pytest pytest-benchmark scipy mako
+        python -m pip install pytest pytest-benchmark scipy mako jax numba
         pip install --verbose .
 
     - name: Test
