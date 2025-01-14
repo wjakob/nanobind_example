@@ -366,7 +366,7 @@ struct mpr {
 // precomputed cx1 & cx2, and updates buffer in cx
 template <typename model, int width=8>
 static void heun_step(
-  const cx &cx, float *states, const float* cx1, const float* cx2, const float *params,
+  const cxb<width> &cx, float *states, const float* cx1, const float* cx2, const float *params,
   const uint32_t i_node, const uint32_t i_time, const float dt
 )
 {
@@ -381,13 +381,13 @@ static void heun_step(
   // Heun stage 1
   model::template dfun<width>(dx1, x, cx1, params);
   for (int svar=0; svar < nsvar; svar++)
-      sheunpred<width>(x+svar*width, xi+svar*width, dx1+svar*width, dt);
+      heunpred<width>(x+svar*width, xi+svar*width, dx1+svar*width, dt);
   model::template adhoc<width>(xi);
 
   // Heun stage 2
   model::template dfun<width>(dx2, xi, cx2, params);
   for (int svar=0; svar < nsvar; svar++)
-      sheuncorr<width>(x+svar*width, dx1+svar*width, dx2+svar*width, dt);
+      heuncorr<width>(x+svar*width, dx1+svar*width, dx2+svar*width, dt);
   model::template adhoc<width>(x);
   for (int svar=0; svar < nsvar; svar++)
       load<width>(states+width*(i_node + num_node*svar), x+svar*width);

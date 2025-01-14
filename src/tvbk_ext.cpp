@@ -145,7 +145,7 @@ NB_MODULE(tvbk_ext, m) {
       // check x.shape[2] == cx.num_node == p.shape[1]
       if (!(x.shape(2) == cx.num_node && x.shape(2) == p.shape(1)))
         throw std::runtime_error("node shapes don't match: check that x.shape[2] == cx.num_node == p.shape[1]");
-      tvbk::step_batches<tvbk::jr,8>(cx, c, (float *)x.data(), (float *)p.data(), t0, t1, dt);
+      tvbk::step_batches<tvbk::jr,8>(cx, c, (float *)x.data(), (float *)p.data(), t0, nt, dt);
     }, "cx"_a, "c"_a, "x"_a, "p"_a, "t0"_a, "nt"_a, "dt"_a);
 
   m.def("step_mpr8",
@@ -160,7 +160,7 @@ NB_MODULE(tvbk_ext, m) {
       // check x.shape[2] == cx.num_node == p.shape[1]
       if (!(x.shape(2) == cx.num_node && x.shape(2) == p.shape(1)))
         throw std::runtime_error("node shapes don't match: check that x.shape[2] == cx.num_node == p.shape[1]");
-      tvbk::step_batches<tvbk::mpr,8>(cx, c, (float *)x.data(), (float *)p.data(), t0, t1, dt);
+      tvbk::step_batches<tvbk::mpr,8>(cx, c, (float *)x.data(), (float *)p.data(), t0, nt, dt);
     }, "cx"_a, "c"_a, "x"_a, "p"_a, "t0"_a, "nt"_a, "dt"_a);
 
 }
