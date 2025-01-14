@@ -247,10 +247,6 @@ JRTheta = collections.namedtuple(
 jr_default_theta = JRTheta(
     A=3.25, B=22.0, a=0.1, b=0.05, v0=5.52, nu_max=0.0025, 
     r=0.56, J=135.0, a_1=1.0, a_2=0.8, a_3=0.25, a_4=0.25, mu=0.22, I=0.0)
-
-JRState = collections.namedtuple(
-    typename='JRState',
-    field_names='y0 y1 y2 y3 y4 y5'.split(' '))
     
 def dfun_jr_np(ys, cs, p):
     y0, y1, y2, y3, y4, y5 = ys
@@ -279,3 +275,39 @@ def test_jr8():
         m.dfun_jr8(dx, x, c, p)
         dx_np = dfun_jr_np(x, c, JRTheta(*p))
         np.testing.assert_allclose(dx, dx_np, 0.15, 0.1)
+
+
+# Montbrio-Pazo-Roxin
+MPRTheta = collections.namedtuple(
+    typename='MPRTheta',
+    field_names='tau I Delta J eta cr'.split(' '))
+
+mpr_default_theta = MPRTheta(
+    tau=1.0,
+    I=0.0,
+    Delta=1.0,
+    J=15.0,
+    eta=-5.0,
+    cr=1.0
+)
+
+def mpr_dfun(ys, c, p):
+    r, V = ys
+    r = r * (r > 0)
+    I_c = p.cr * c[0]
+    return np.array([
+        (1 / p.tau) * (p.Delta / (np.pi * p.tau) + 2 * r * V),
+        (1 / p.tau) * (V ** 2 + p.eta + p.J * p.tau *
+         r + p.I + I_c - (np.pi ** 2) * (r ** 2) * (p.tau ** 2))
+    ])
+
+def test_mpr8():
+    for i in range(1024):
+        dx = np.zeros((2, 8), 'f')
+        x = np.random.randn(*dx.shape).astype('f')/5+np.c_[0.5,-2.0].T
+        c = np.random.randn(1,8).astype('f')/2
+        p = np.tile(np.array(mpr_default_theta).astype('f'), (8, 1)).T.copy()
+        assert p.shape == (6, 8)
+        m.dfun_mpr8(dx, x, c, p)
+        dx_np = mpr_dfun(x, c, MPRTheta(*p))
+        np.testing.assert_allclose(dx, dx_np, 0.01, 0.01)

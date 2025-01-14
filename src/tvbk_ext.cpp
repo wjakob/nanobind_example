@@ -124,4 +124,13 @@ NB_MODULE(tvbk_ext, m) {
       tvbk::jr::dfun<8>((float *)dx.data(), (float *)x.data(), (float *)c.data(), (float *)p.data());
     }, "dx"_a, "x"_a, "c"_a, "p"_a);
 
+  m.def("dfun_mpr8",
+    [](farr<nb::shape<tvbk::mpr::num_svar,8>> &dx,
+       farr<nb::shape<tvbk::mpr::num_svar,8>> &x,
+       farr<nb::shape<tvbk::mpr::num_cvar,8>> &c,
+       farr<nb::shape<tvbk::mpr::num_parm,8>> &p)
+    {  
+      tvbk::mpr::dfun<8>((float *)dx.data(), (float *)x.data(), (float *)c.data(), (float *)p.data());
+    }, "dx"_a, "x"_a, "c"_a, "p"_a);
+
 }
