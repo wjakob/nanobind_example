@@ -150,6 +150,13 @@ INLINE void randn(uint64_t *seed, int n, float *out) {
     out[i] = randn1(seed);
 }
 
+template <int width>
+INLINE void krandn(uint64_t **seed, float *out) {
+  #pragma omp simd
+  for (int i = 0; i < width; i++)
+    out[i] = randn1(seed[i]);
+}
+
 /* simple stuff */
 kernel(inc,      x[i]                    += w*y[i], float *x, float *y, float w)
 kernel(adds,     x[i]                         += a, float *x, float a)
@@ -301,7 +308,7 @@ static void INLINE cx_j_bs(
 
 struct jr {
   static const uint32_t num_svar=6, num_parm=14, num_cvar=1;
-  static constexpr char *const parms = "A,B,a,b,v0,nu_max,r,J,a_1,a_2,a_3,a_4,mu,I";
+  static constexpr const char *const parms = "A,B,a,b,v0,nu_max,r,J,a_1,a_2,a_3,a_4,mu,I";
   // with width=8 & -O3 -mavx2 -fveclib=libmvec -ffast-math & __restrict inputs,
   // clang generates straight asm no jumps
   // gcc also good, but drop -fveclib=libmvec
@@ -331,8 +338,8 @@ struct jr {
 
 struct mpr {
   static const uint32_t num_svar=2, num_parm=6, num_cvar=1;
-  static constexpr char * const parms = "tau I Delta J eta cr";
-  static constexpr float default_parms[6] = {1.0, 0.0, 1.0, 15.0, -5.0, 1.0};
+  static constexpr const char * const parms = "tau I Delta J eta cr";
+  static constexpr const float default_parms[6] = {1.0, 0.0, 1.0, 15.0, -5.0, 1.0};
   template <int width>
   INLINE static void
   dfun(float *__restrict dx, const float *__restrict x, const float *__restrict c, const float *__restrict p)
@@ -348,68 +355,40 @@ struct mpr {
   }
 };
 
-
-/* WIP
-
-template <uint8_t nsvar, uint8_t width, typename dfun>
-struct model
+// steps a model for single batch of nodes size width assuming
+// precomputed cx1 & cx2, and updates buffer in cx
+template <typename model, int width=8>
+static void heun_step(
+  uint64_t **rng, float *states,
+  const uint32_t i_node, const uint32_t i_time,
+  const float* cx1, const float* cx2, const float *params, const float dt, const cx &cx
+)
 {
-  const uint32_t num_node, horizon, horizon_minus_1;
-  float *states, *params, dt;
-  const cx &cx;
-  
-  void step(const uint32_t i_node, const uint32_t i_time,
-            const float* cx1, const float* cx2)
+  constexpr uint8_t nsvar = model::num_svar;
+  const uint32_t num_node = cx.num_node, horizon = cx.num_time;
+
+  float x[nsvar*width], xi[nsvar*width]={}, dx1[nsvar*width]={}, dx2[nsvar*width]={}, z[nsvar*width];
+
+  for (int svar=0; svar < nsvar; svar++)
   {
-    float x[nsvar*width], xi[nsvar*width], dx1[nsvar*width], dx2[nsvar*width], z[nsvar*width];
-    for (int svar=0; svar < nsvar; svar++)
-    {
-        load<width>(x+svar*width, states+width*(i_node + num_node*svar));
-        zero<width>(xi+svar*width);
-        zero<width>(dx1+svar*width);
-        zero<width>(dx2+svar*width);
-        zero<width>(z+svar*width);
-    }
-    
-    dfun(x, x+width, cx1, params, params+width, params+2*width, dx1, dx1+width);
-
-    for (int svar=0; svar < nsvar; svar++)
-        heunpred<width>(x+svar*width, xi+svar*width, dx1+svar*width, dt);
-
-    dfun(xi, xi + width, cx2, params, params + width, params + 2 * width, dx2,
-         dx2 + width);
-    for (int svar=0; svar < nsvar; svar++)
-    {
-        heuncorr<width>(x+svar*width, dx1+svar*width, dx2+svar*width, dt);
-        load<width>(states+width*(i_node + num_node*svar), x+svar*width);
-    }
-    int write_time = i_time & horizon_minus_1;
-    load<width>(cx.buf + width * (i_node * horizon + write_time),
-                states + width * (i_node + num_node * 0));
+      load<width>(x+svar*width, states+width*(i_node + num_node*svar));
+      krandn<width>(rng, z+svar*width);
   }
-};
+  
+  model::dfun<width>(dx1, x, cx1, params);
 
-template <uint8_t width>
-struct dfun_linear {
-  void operator()(const float *x, const float *y, const float *cx,
-                  const float *a, const float *tau, const float *k, float *dx,
-                  float *dy) {
-#pragma omp simd
-    for (int i=0; i<width; i++) {
-      dx[i] = -x[i] + cx[i];
-      dy[i] = -y[i];
-    }
+  for (int svar=0; svar < nsvar; svar++)
+      sheunpred<width>(x+svar*width, xi+svar*width, dx1+svar*width, z, dt);
+
+  model::dfun<width>(dx2, xi, cx2, params);
+  for (int svar=0; svar < nsvar; svar++)
+  {
+      sheuncorr<width>(x+svar*width, dx1+svar*width, dx2+svar*width, z, dt);
+      load<width>(states+width*(i_node + num_node*svar), x+svar*width);
   }
-};
-
-template <uint8_t width> struct linear : model<2,width,dfun_linear<width>> { };
-
-void foobar() {
-    linear<8> l {4, 5, 6};
-    uint32_t m=2,n=5;
-    float cx1[8], cx2[8];
-    l.step(m, n, cx1, cx2);
+  int write_time = i_time & (cx.num_time - 1);
+  load<width>(cx.buf + width * (i_node * horizon + write_time),
+              states + width * (i_node + num_node * 0));
 }
-*/
 
 } // namespace tvbk
