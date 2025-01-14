@@ -11,6 +11,9 @@ typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1,-1,-1>, nb::
 typedef nb::ndarray<float, nb::numpy, nb::device::cpu, nb::shape<-1,-1,-1,-1>, nb::c_contig> farr4;
 typedef nb::ndarray<uint32_t, nb::numpy, nb::device::cpu, nb::shape<-1>, nb::c_contig> uvec;
 
+template<typename shape> 
+using farr = nb::ndarray<float, nb::numpy, nb::device::cpu, shape, nb::c_contig>;
+
 NB_MODULE(tvbk_ext, m) {
 
   m.def(
@@ -111,5 +114,14 @@ NB_MODULE(tvbk_ext, m) {
         },
         "cxs8"_a, "conn"_a, "t"_a,
         "This function calculates many batched afferent coupling buffer.");
+
+  m.def("dfun_jr8",
+    [](farr<nb::shape<tvbk::jr::num_svar,8>> &dx,
+       farr<nb::shape<tvbk::jr::num_svar,8>> &x,
+       farr<nb::shape<tvbk::jr::num_cvar,8>> &c,
+       farr<nb::shape<tvbk::jr::num_parm,8>> &p)
+    {  
+      tvbk::jr::dfun<8>((float *)dx.data(), (float *)x.data(), (float *)c.data(), (float *)p.data());
+    }, "dx"_a, "x"_a, "c"_a, "p"_a);
 
 }
