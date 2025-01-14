@@ -332,9 +332,9 @@ struct jr {
       dx[i+5*width] = B * b * (a_4 * J * sigm_y0_3) - 2.0f * b * y5 - b *b * y2;
     }
   }
+  // adhoc adjustments to state variables after heun stages, e.g. to enforce constraints
+  template <int width> INLINE static void adhoc(float *) { }
 };
-
-
 
 struct mpr {
   static const uint32_t num_svar=2, num_parm=6, num_cvar=1;
@@ -353,42 +353,84 @@ struct mpr {
       dx[i+1*width] = (1 / tau) * (V * V + eta + J * tau * r + I + cr * c[i] - (M_PI * M_PI) * (r * r) * (tau * tau));
     }
   }
+  template <int width> INLINE static void adhoc(float *x) {
+    #pragma omp simd
+    for (int i=0; i<width; i++) {
+      // x[i] is r
+      x[i] = x[i] * (x[i] > 0);
+    }
+  }
 };
 
 // steps a model for single batch of nodes size width assuming
 // precomputed cx1 & cx2, and updates buffer in cx
 template <typename model, int width=8>
 static void heun_step(
-  uint64_t **rng, float *states,
-  const uint32_t i_node, const uint32_t i_time,
-  const float* cx1, const float* cx2, const float *params, const float dt, const cx &cx
+  const cx &cx, float *states, const float* cx1, const float* cx2, const float *params,
+  const uint32_t i_node, const uint32_t i_time, const float dt
 )
 {
   constexpr uint8_t nsvar = model::num_svar;
   const uint32_t num_node = cx.num_node, horizon = cx.num_time;
+  float x[nsvar*width], xi[nsvar*width]={}, dx1[nsvar*width]={}, dx2[nsvar*width]={};
 
-  float x[nsvar*width], xi[nsvar*width]={}, dx1[nsvar*width]={}, dx2[nsvar*width]={}, z[nsvar*width];
-
+  // load states
   for (int svar=0; svar < nsvar; svar++)
-  {
       load<width>(x+svar*width, states+width*(i_node + num_node*svar));
-      krandn<width>(rng, z+svar*width);
-  }
-  
-  model::dfun<width>(dx1, x, cx1, params);
 
+  // Heun stage 1
+  model::template dfun<width>(dx1, x, cx1, params);
   for (int svar=0; svar < nsvar; svar++)
-      sheunpred<width>(x+svar*width, xi+svar*width, dx1+svar*width, z, dt);
+      sheunpred<width>(x+svar*width, xi+svar*width, dx1+svar*width, dt);
+  model::template adhoc<width>(xi);
 
-  model::dfun<width>(dx2, xi, cx2, params);
+  // Heun stage 2
+  model::template dfun<width>(dx2, xi, cx2, params);
   for (int svar=0; svar < nsvar; svar++)
-  {
-      sheuncorr<width>(x+svar*width, dx1+svar*width, dx2+svar*width, z, dt);
+      sheuncorr<width>(x+svar*width, dx1+svar*width, dx2+svar*width, dt);
+  model::template adhoc<width>(x);
+  for (int svar=0; svar < nsvar; svar++)
       load<width>(states+width*(i_node + num_node*svar), x+svar*width);
-  }
+
+  // update buffer
+  // TODO move out, to handle multiple cvars/cx/conns
   int write_time = i_time & (cx.num_time - 1);
   load<width>(cx.buf + width * (i_node * horizon + write_time),
               states + width * (i_node + num_node * 0));
+}
+
+template <typename model, int width=8>
+static void INLINE step_batch(
+  const cxb<width> &cx, const conn &c,
+  float *x, // (num_svar, num_node, width)
+  // TODO try x layout as (num_node, num_svar, width)
+  const float *p, // (num_node, num_parm, width)
+  const uint32_t t0, const uint32_t nt, const float dt)
+{
+  float cx1[width], cx2[width];
+  for (uint32_t t=t0; t<(t0+nt); t++) {
+    for (uint32_t i = 0; i < cx.num_node; i++) {
+      apply_all_node<width>(cx, c, t, i, cx1, cx2);
+      heun_step<model, width>(cx, x, cx1, cx2, p+i*model::num_parm*width, i, t, dt);
+    }
+  }
+}
+
+template <typename model, int width=8>
+static void INLINE step_batches(
+  const cxbs<width> &cx, const conn &c,
+  float *x, // (num_batch, num_svar, num_node, width)
+  // TODO try x layout as (num_node, num_svar, width)
+  const float *p, // (num_batch, num_node, num_parm, width)
+  const uint32_t t0, const uint32_t nt, const float dt)
+{
+  #pragma omp parallel for
+  for (int b=0; b<cx.num_batch; b++)
+    step_batch<model, width>(
+      cx.batch(b), c,
+      x + b * model::num_svar * cx.num_node * width,
+      p + b * cx.num_node * model::num_parm * width,
+      t0, nt, dt);
 }
 
 } // namespace tvbk
