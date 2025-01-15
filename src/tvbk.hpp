@@ -356,7 +356,6 @@ struct mpr {
   template <int width> INLINE static void adhoc(float *x) {
     #pragma omp simd
     for (int i=0; i<width; i++) {
-      // x[i] is r
       x[i] = x[i] * (x[i] > 0);
     }
   }
@@ -373,6 +372,17 @@ static void heun_step(
   constexpr uint8_t nsvar = model::num_svar;
   const uint32_t num_node = cx.num_node, horizon = cx.num_time;
   float x[nsvar*width], xi[nsvar*width]={}, dx1[nsvar*width]={}, dx2[nsvar*width]={};
+
+  if (i_node==4) {
+    // printf("I_c: ");
+    // for (int i=0; i<width; i++) printf("%0.3f ", cx1[i]);
+    // // for (int i=0; i<width; i++) printf("%0.3f ", params[i+5*width]);
+    // printf("\n");
+    // printf("I_c: ");
+    // for (int i=0; i<width; i++) printf("%0.3f ", cx2[i]);
+    // // for (int i=0; i<width; i++) printf("%0.3f ", params[i+5*width]);
+    // printf("\n\n");
+  }
 
   // load states
   for (int svar=0; svar < nsvar; svar++) {

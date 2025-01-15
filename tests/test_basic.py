@@ -294,7 +294,9 @@ mpr_default_theta = MPRTheta(
 def mpr_dfun(ys, c, p):
     r, V = ys
     r = r * (r > 0)
-    I_c = p.cr * c[0]
+    I_c = p.cr * c
+    # with np.printoptions(precision=3):
+    #     print(f'I_c: ', I_c)
     return np.array([
         (1 / p.tau) * (p.Delta / (np.pi * p.tau) + 2 * r * V),
         (1 / p.tau) * (V ** 2 + p.eta + p.J * p.tau *
@@ -325,22 +327,29 @@ def run_sim_np(dfun, num_svar, buf_init,
     trace_shape = num_time // num_skip + 1, num_svar, num_node, num_item
     trace = np.zeros(trace_shape, 'f')
     assert idelays.max() < horizon-2
-    idelays2 = -horizon + np.c_[idelays, idelays-1].T
+    idelays2 = horizon - np.c_[idelays, idelays-1].T
     assert idelays2.shape == (2, csr_weights.nnz)
     buffer = np.zeros((num_node, horizon, num_item))
     buffer[:] = buf_init
 
+
     def cfun(t):
-        cx = buffer[csr_weights.indices, (t-idelays2) % horizon]
+        cx = buffer[csr_weights.indices, (t+idelays2) % horizon]
         cx *= csr_weights.data.reshape(-1, 1)
         cx = np.add.reduceat(cx, csr_weights.indptr[:-1], axis=1)
+        # with np.printoptions(precision=3):
+        #     print(f'cx1(t={t}):', cx[0,4])
         return cx  # (2, num_node, num_item)
 
     def heun(x, cx):
         z = np.random.randn(2, num_node, num_item)*z_scale.reshape((2, 1, 1)) if z_scale is not None else 0
         dx1 = dfun(x, cx[0], sim_params)
-        dx2 = dfun(x + dt*dx1 + z, cx[1], sim_params)
-        return x + dt/2*(dx1 + dx2) + z
+        xi = x + dt*dx1 + z
+        xi[0] = xi[0]*(xi[0] > 0)
+        dx2 = dfun(xi, cx[1], sim_params)
+        nx = x + dt/2*(dx1 + dx2) + z
+        nx[0] = nx[0]*(nx[0] > 0)
+        return nx
 
     x = np.zeros((num_svar, num_node, num_item), 'f')
 
@@ -348,6 +357,7 @@ def run_sim_np(dfun, num_svar, buf_init,
         for tt in range(num_skip):
             ttt = t*num_skip + tt
             cx = cfun(ttt)
+            print()
             x = heun(x, cx)
             buffer[:, ttt % horizon] = x[0]
         trace[t] = x
@@ -359,25 +369,28 @@ def test_step_mpr():
     cv = 1.0
     dt = 0.01
     num_node = 8
-    num_skip = 10
-    num_time = 1000
+    num_skip = 1
+    num_time = 5
     horizon = 256
     num_batch = 1
-    sparsity = 0.5 # nnz=0.5*num_node**2
+    sparsity = 0.9 # nnz=0.5*num_node**2
 
-    np.random.seed(42)
-
-    weights, lengths, spw_j = rand_weights(sparsity=sparsity, num_node=num_node, horizon=horizon, dt=dt, cv=cv)
+    weights, lengths, spw_j = rand_weights(
+        seed=46,
+        sparsity=sparsity, num_node=num_node, horizon=horizon,
+        dt=dt, cv=cv)
+    weights = np.ones_like(weights)
     s_w = scipy.sparse.csr_matrix(weights)
-    idelays = (lengths[weights != 0]/dt).astype('i')+2
+    idelays = (lengths[weights != 0]/cv/dt).astype(np.uint32)+2
+    idelays = idelays//25 + 2
     assert idelays.max() < horizon
-
+    assert idelays.min() >= 2
     cx = m.Cx8s(num_node, horizon, num_batch)
     conn = m.Conn(num_node, s_w.data.size)  #, mode=mode)
     conn.weights[:] = s_w.data.astype(np.float32)
-    conn.indices[:] = s_w.indices.astype(np.uint32)
     conn.indptr[:] = s_w.indptr.astype(np.uint32)
-    conn.idelays[:] = (lengths[weights != 0]/cv/dt).astype(np.uint32)+2
+    conn.indices[:] = s_w.indices.astype(np.uint32)
+    conn.idelays[:] = idelays
 
     assert cx.buf.shape == (num_batch, num_node, horizon, 8)
     # then we can test
@@ -394,10 +407,10 @@ def test_step_mpr():
     x = np.zeros((num_batch, num_svar, num_node, 8), 'f')
     p = np.zeros((num_batch, num_node, num_parm, 8), 'f')
     p[:] = p + np.array(mpr_default_theta
-                        ).reshape(1,1,-1,1) + np.random.randn(*p.shape)*0.2
+                        ).reshape(1,1,-1,1) + np.random.randn(*p.shape)*0.1
     # set uniform I & cr
-    p[...,1,:] = 2.0
-    p[...,5,:] = 1e-1
+    p[...,1,:] += 2.0
+    p[...,5,:] /= 10.0
     
     trace_np = run_sim_np(
         mpr_dfun, num_svar, buf_init_np, s_w, idelays,
@@ -407,7 +420,7 @@ def test_step_mpr():
         dt=dt, num_skip=num_skip
     )
     trace_np = trace_np.reshape(-1, num_svar, num_node, num_batch, 8).transpose( 0, 3, 1, 2, 4 )
-
+    print()
     trace_c = np.zeros_like(trace_np) # (num_time//num_skip, num_batch, num_svar, num_node, 8)
     for t0 in range(trace_c.shape[0]):
         m.step_mpr8(cx, conn, x, p, t0*num_skip, num_skip, dt)
@@ -420,13 +433,35 @@ def test_step_mpr():
 
     import pylab as pl
     # (num_time//num_skip, num_batch, num_svar, num_node, 8)
-    def plot1(i,s,n,w):
-        pl.subplot(4,2,i);
-        pl.plot(trace_np[:,0,s,n,w], 'r-', alpha=0.4)
-        pl.plot(trace_c[:,0,s,n,w], 'k-', alpha=0.4)
-    for i in [0,1]:
-        plot1(i*4+1,1,i,0)
-        plot1(i*4+2,1,i,1)
-        plot1(i*4+3,1,i,2)
-        plot1(i*4+4,1,i,3)
+    
+    ae = 0.0
+    iae = -1
+    for i in range(8):
+        for j in range(8):
+            s = 1  # V
+            pl.subplot(8,8,i*8+j+1);
+            _np = trace_np[:,0,s,i,j]
+            _c = trace_c[:,0,s,i,j]
+            if True:
+                _np, _c = np.diff(_np, axis=0), np.diff(_c, axis=0)
+            pl.plot(_np, 'r-', alpha=0.4)
+            pl.plot(_c, 'k-', alpha=0.4)
+            pl.xticks([]); pl.yticks([])
+            _ae = np.abs(_np-_c).sum()
+            if _ae > ae:
+                ae, iae = _ae, (i,j)
+    pl.tight_layout()
     pl.savefig('test_mpr.jpg')
+    
+    pl.figure()
+    s, (i,j) = 1, iae
+    _np = trace_np[:,0,s,i,j]
+    _c = trace_c[:,0,s,i,j]
+    pl.subplot(211)
+    pl.plot(_np, 'r-', alpha=0.4)
+    pl.plot(_c, 'k-', alpha=0.4)
+    pl.subplot(212)
+    _np, _c = np.diff(_np, axis=0), np.diff(_c, axis=0)
+    pl.plot(_np, 'r-', alpha=0.4)
+    pl.plot(_c, 'k-', alpha=0.4)
+    pl.savefig('test_mpr2.jpg')
