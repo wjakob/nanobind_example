@@ -357,7 +357,7 @@ def run_sim_np(dfun, num_svar, buf_init,
         for tt in range(num_skip):
             ttt = t*num_skip + tt
             cx = cfun(ttt)
-            print()
+            # print()
             x = heun(x, cx)
             buffer[:, ttt % horizon] = x[0]
         trace[t] = x
@@ -369,11 +369,11 @@ def test_step_mpr():
     cv = 1.0
     dt = 0.01
     num_node = 8
-    num_skip = 1
-    num_time = 5
+    num_skip = 10
+    num_time = 1000
     horizon = 256
     num_batch = 1
-    sparsity = 0.9 # nnz=0.5*num_node**2
+    sparsity = 0.5 # nnz=0.5*num_node**2
 
     weights, lengths, spw_j = rand_weights(
         seed=46,
@@ -382,7 +382,7 @@ def test_step_mpr():
     weights = np.ones_like(weights)
     s_w = scipy.sparse.csr_matrix(weights)
     idelays = (lengths[weights != 0]/cv/dt).astype(np.uint32)+2
-    idelays = idelays//25 + 2
+    # idelays = idelays//25 + 2
     assert idelays.max() < horizon
     assert idelays.min() >= 2
     cx = m.Cx8s(num_node, horizon, num_batch)
