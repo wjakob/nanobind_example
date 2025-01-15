@@ -410,7 +410,7 @@ def test_step_mpr():
                         ).reshape(1,1,-1,1) + np.random.randn(*p.shape)*0.1
     # set uniform I & cr
     p[...,1,:] += 2.0
-    p[...,5,:] /= 10.0
+    p[...,5,:] /= num_node
     
     trace_np = run_sim_np(
         mpr_dfun, num_svar, buf_init_np, s_w, idelays,
