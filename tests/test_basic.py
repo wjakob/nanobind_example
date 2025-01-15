@@ -372,7 +372,7 @@ def test_step_mpr():
     num_skip = 10
     num_time = 1000
     horizon = 256
-    num_batch = 1
+    num_batch = 4
     sparsity = 0.5 # nnz=0.5*num_node**2
 
     weights, lengths, spw_j = rand_weights(
