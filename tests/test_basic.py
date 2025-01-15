@@ -311,3 +311,90 @@ def test_mpr8():
         m.dfun_mpr8(dx, x, c, p)
         dx_np = mpr_dfun(x, c, MPRTheta(*p))
         np.testing.assert_allclose(dx, dx_np, 0.01, 0.01)
+
+# ref impl for sim w/ numpy
+def run_sim_np(dfun, num_svar,
+    csr_weights: scipy.sparse.csr_matrix,
+    idelays: np.ndarray,
+    sim_params: np.ndarray,
+    horizon: int,
+    z_scale: np.ndarray=None,
+    rng_seed=43, num_item=8, num_node=90, num_time=1000, dt=0.1,
+    num_skip=5
+):
+    trace_shape = num_time // num_skip + 1, num_svar, num_node, num_item
+    trace = np.zeros(trace_shape, 'f')
+    assert idelays.max() < horizon-2
+    idelays2 = -horizon + np.c_[idelays, idelays-1].T
+    assert idelays2.shape == (2, csr_weights.nnz)
+    buffer = np.zeros((num_node, horizon, num_item))
+
+    def cfun(t):
+        cx = buffer[csr_weights.indices, (t-idelays2) % horizon]
+        cx *= csr_weights.data.reshape(-1, 1)
+        cx = np.add.reduceat(cx, csr_weights.indptr[:-1], axis=1)
+        return cx  # (2, num_node, num_item)
+
+    def heun(x, cx):
+        z = np.random.randn(2, num_node, num_item)*z_scale.reshape((2, 1, 1)) if z_scale is not None else 0
+        dx1 = dfun(x, cx[0], sim_params)
+        dx2 = dfun(x + dt*dx1 + z, cx[1], sim_params)
+        return x + dt/2*(dx1 + dx2) + z
+
+    x = np.zeros((num_svar, num_node, num_item), 'f')
+
+    for t in range(trace.shape[0]):
+        for tt in range(num_skip):
+            ttt = t*num_skip + tt
+            cx = cfun(ttt)
+            x = heun(x, cx)
+            buffer[:, ttt % horizon] = x[0]
+        trace[t] = x
+
+    return trace
+
+
+def test_step_mpr():
+    cv = 1.0
+    dt = 0.1
+    num_node = 90
+    num_skip = 10
+    horizon = 256
+    weights, lengths, spw_j = rand_weights(num_node=num_node, horizon=horizon, dt=dt, cv=cv)
+    s_w = scipy.sparse.csr_matrix(weights)
+    idelays = (lengths[weights != 0]/dt).astype('i')+2
+
+    num_batch = 4
+    cx = m.Cx8s(num_node, horizon, num_batch)
+    conn = m.Conn(num_node, s_w.data.size)  #, mode=mode)
+    conn.weights[:] = s_w.data.astype(np.float32)
+    conn.indices[:] = s_w.indices.astype(np.uint32)
+    conn.indptr[:] = s_w.indptr.astype(np.uint32)
+    conn.idelays[:] = (lengths[weights != 0]/cv/dt).astype(np.uint32)+2
+
+    assert cx.buf.shape == (num_batch, num_node, horizon, 8)
+    # then we can test
+    buf_val = np.r_[:1.0:1j*num_batch*num_node *
+                      horizon * 8].reshape(num_batch, num_node, horizon, 8).astype('f')*4.0
+    cx.buf[:] = buf_val
+    np.testing.assert_equal(buf_val, cx.buf)
+    cx.cx1[:] = cx.cx2[:] = 0.0
+
+    # cx, c, x, p, t0, nt, dt
+    num_svar, num_parm = 2, 6
+    x = np.zeros((num_batch, num_svar, num_node, 8), 'f')
+    p = np.zeros((num_batch, num_node, num_parm, 8), 'f')
+    
+    trace_np = run_sim_np(
+        mpr_dfun, num_svar, s_w, idelays, mpr_default_theta,
+        horizon, num_item=num_batch*8, num_node=num_node, num_time=100,
+        dt=dt, num_skip=num_skip
+    )
+    trace_np = trace_np.reshape(-1, num_svar, num_node, num_batch, 8).transpose( 0, 3, 1, 2, 4)
+
+    trace_c = np.zeros_like(trace_np) # (num_time//num_skip, num_batch, num_svar, num_node, 8)
+    for t0 in range(trace_c.shape[0]):
+        m.step_mpr8(cx, conn, x, p, t0*num_skip, num_skip, dt)
+        trace_c[t0] = x
+
+    np.testing.assert_allclose(trace_c, trace_np, 0.01, 0.01)
