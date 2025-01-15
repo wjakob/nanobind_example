@@ -375,8 +375,12 @@ static void heun_step(
   float x[nsvar*width], xi[nsvar*width]={}, dx1[nsvar*width]={}, dx2[nsvar*width]={};
 
   // load states
-  for (int svar=0; svar < nsvar; svar++)
-      load<width>(x+svar*width, states+width*(i_node + num_node*svar));
+  for (int svar=0; svar < nsvar; svar++) {
+    load<width>(x+svar*width, states+width*(i_node + num_node*svar));
+    zero<width>(xi+svar*width);
+    zero<width>(dx1+svar*width);
+    zero<width>(dx2+svar*width);
+  }
 
   // Heun stage 1
   model::template dfun<width>(dx1, x, cx1, params);
@@ -395,8 +399,7 @@ static void heun_step(
   // update buffer
   // TODO move out, to handle multiple cvars/cx/conns
   int write_time = i_time & (cx.num_time - 1);
-  load<width>(cx.buf + width * (i_node * horizon + write_time),
-              states + width * (i_node + num_node * 0));
+  load<width>(cx.buf + width * (i_node * horizon + write_time),x);
 }
 
 template <typename model, int width=8>
@@ -411,7 +414,9 @@ static void INLINE step_batch(
   for (uint32_t t=t0; t<(t0+nt); t++) {
     for (uint32_t i = 0; i < cx.num_node; i++) {
       apply_all_node<width>(cx, c, t, i, cx1, cx2);
-      heun_step<model, width>(cx, x, cx1, cx2, p+i*model::num_parm*width, i, t, dt);
+      heun_step<model, width>(cx, x, cx1, cx2, 
+        p+i*model::num_parm*width,
+        i, t, dt);
     }
   }
 }

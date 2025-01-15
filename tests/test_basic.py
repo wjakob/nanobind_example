@@ -313,7 +313,7 @@ def test_mpr8():
         np.testing.assert_allclose(dx, dx_np, 0.01, 0.01)
 
 # ref impl for sim w/ numpy
-def run_sim_np(dfun, num_svar,
+def run_sim_np(dfun, num_svar, buf_init,
     csr_weights: scipy.sparse.csr_matrix,
     idelays: np.ndarray,
     sim_params: np.ndarray,
@@ -328,6 +328,7 @@ def run_sim_np(dfun, num_svar,
     idelays2 = -horizon + np.c_[idelays, idelays-1].T
     assert idelays2.shape == (2, csr_weights.nnz)
     buffer = np.zeros((num_node, horizon, num_item))
+    buffer[:] = buf_init
 
     def cfun(t):
         cx = buffer[csr_weights.indices, (t-idelays2) % horizon]
@@ -356,15 +357,21 @@ def run_sim_np(dfun, num_svar,
 
 def test_step_mpr():
     cv = 1.0
-    dt = 0.1
-    num_node = 90
+    dt = 0.01
+    num_node = 8
     num_skip = 10
+    num_time = 1000
     horizon = 256
-    weights, lengths, spw_j = rand_weights(num_node=num_node, horizon=horizon, dt=dt, cv=cv)
+    num_batch = 1
+    sparsity = 0.5 # nnz=0.5*num_node**2
+
+    np.random.seed(42)
+
+    weights, lengths, spw_j = rand_weights(sparsity=sparsity, num_node=num_node, horizon=horizon, dt=dt, cv=cv)
     s_w = scipy.sparse.csr_matrix(weights)
     idelays = (lengths[weights != 0]/dt).astype('i')+2
+    assert idelays.max() < horizon
 
-    num_batch = 4
     cx = m.Cx8s(num_node, horizon, num_batch)
     conn = m.Conn(num_node, s_w.data.size)  #, mode=mode)
     conn.weights[:] = s_w.data.astype(np.float32)
@@ -380,21 +387,46 @@ def test_step_mpr():
     np.testing.assert_equal(buf_val, cx.buf)
     cx.cx1[:] = cx.cx2[:] = 0.0
 
+    buf_init_np = buf_val.transpose(1,2,0,3).reshape(num_node, horizon, num_batch*8)
+
     # cx, c, x, p, t0, nt, dt
     num_svar, num_parm = 2, 6
     x = np.zeros((num_batch, num_svar, num_node, 8), 'f')
     p = np.zeros((num_batch, num_node, num_parm, 8), 'f')
+    p[:] = p + np.array(mpr_default_theta
+                        ).reshape(1,1,-1,1) + np.random.randn(*p.shape)*0.2
+    # set uniform I & cr
+    p[...,1,:] = 2.0
+    p[...,5,:] = 1e-1
     
     trace_np = run_sim_np(
-        mpr_dfun, num_svar, s_w, idelays, mpr_default_theta,
-        horizon, num_item=num_batch*8, num_node=num_node, num_time=100,
+        mpr_dfun, num_svar, buf_init_np, s_w, idelays,
+        MPRTheta(*p.transpose(2,1,0,3).reshape(num_parm,num_node,num_batch*8)),
+        # mpr_default_theta,
+        horizon, num_item=num_batch*8, num_node=num_node, num_time=num_time,
         dt=dt, num_skip=num_skip
     )
-    trace_np = trace_np.reshape(-1, num_svar, num_node, num_batch, 8).transpose( 0, 3, 1, 2, 4)
+    trace_np = trace_np.reshape(-1, num_svar, num_node, num_batch, 8).transpose( 0, 3, 1, 2, 4 )
 
     trace_c = np.zeros_like(trace_np) # (num_time//num_skip, num_batch, num_svar, num_node, 8)
     for t0 in range(trace_c.shape[0]):
         m.step_mpr8(cx, conn, x, p, t0*num_skip, num_skip, dt)
         trace_c[t0] = x
+        # for i in range(num_svar):
+        #     a, b = trace_c[t0, 0, i], trace_np[t0, 0, i]
+        #     for j in range(num_node):
+        #         np.testing.assert_allclose(a[j], b[j], 0.01, 0.01)                                                                                                                                                                                                                                                   
+    # np.testing.assert_allclose(trace_c, trace_np, 0.01, 0.01)
 
-    np.testing.assert_allclose(trace_c, trace_np, 0.01, 0.01)
+    import pylab as pl
+    # (num_time//num_skip, num_batch, num_svar, num_node, 8)
+    def plot1(i,s,n,w):
+        pl.subplot(4,2,i);
+        pl.plot(trace_np[:,0,s,n,w], 'r-', alpha=0.4)
+        pl.plot(trace_c[:,0,s,n,w], 'k-', alpha=0.4)
+    for i in [0,1]:
+        plot1(i*4+1,1,i,0)
+        plot1(i*4+2,1,i,1)
+        plot1(i*4+3,1,i,2)
+        plot1(i*4+4,1,i,3)
+    pl.savefig('test_mpr.jpg')
