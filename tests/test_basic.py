@@ -420,7 +420,7 @@ def test_step_mpr():
         dt=dt, num_skip=num_skip
     )
     trace_np = trace_np.reshape(-1, num_svar, num_node, num_batch, 8).transpose( 0, 3, 1, 2, 4 )
-    print()
+
     trace_c = np.zeros_like(trace_np) # (num_time//num_skip, num_batch, num_svar, num_node, 8)
     for t0 in range(trace_c.shape[0]):
         m.step_mpr8(cx, conn, x, p, t0*num_skip, num_skip, dt)
@@ -429,8 +429,9 @@ def test_step_mpr():
         #     a, b = trace_c[t0, 0, i], trace_np[t0, 0, i]
         #     for j in range(num_node):
         #         np.testing.assert_allclose(a[j], b[j], 0.01, 0.01)                                                                                                                                                                                                                                                   
-    # np.testing.assert_allclose(trace_c, trace_np, 0.01, 0.01)
+    np.testing.assert_allclose(trace_c, trace_np, 0.01, 0.01)
 
+    """
     import pylab as pl
     # (num_time//num_skip, num_batch, num_svar, num_node, 8)
     
@@ -465,3 +466,4 @@ def test_step_mpr():
     pl.plot(_np, 'r-', alpha=0.4)
     pl.plot(_c, 'k-', alpha=0.4)
     pl.savefig('test_mpr2.jpg')
+    """
