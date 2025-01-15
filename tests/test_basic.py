@@ -368,7 +368,7 @@ def run_sim_np(dfun, num_svar, buf_init,
 def test_step_mpr():
     cv = 1.0
     dt = 0.01
-    num_node = 8
+    num_node = 90
     num_skip = 10
     num_time = 1000
     horizon = 256
