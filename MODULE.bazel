@@ -1,6 +1,6 @@
 module(name = "nanobind_example", version = "0.1.0")
 
-bazel_dep(name = "nanobind_bazel", version = "2.5.0")
+bazel_dep(name = "nanobind_bazel", version = "2.6.1")
 bazel_dep(name = "rules_python", version = "1.0.0")
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
