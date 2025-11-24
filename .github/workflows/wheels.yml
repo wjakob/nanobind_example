@@ -15,7 +15,7 @@ jobs:
     name: Build SDist
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         submodules: true
 
@@ -40,11 +40,11 @@ jobs:
         os: [ubuntu-latest, macos-15-intel, macos-latest, windows-latest]
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         submodules: true
 
-    - uses: pypa/cibuildwheel@v3.2
+    - uses: pypa/cibuildwheel@v3.3
 
     - name: Verify clean directory
       run: git diff --exit-code
