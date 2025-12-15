@@ -15,7 +15,7 @@ jobs:
     name: Build SDist
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         submodules: true
 
@@ -25,7 +25,7 @@ jobs:
     - name: Check metadata
       run: pipx run twine check dist/*
 
-    - uses: actions/upload-artifact@v5
+    - uses: actions/upload-artifact@v6
       with:
         name: dist-sdist
         path: dist/*.tar.gz
@@ -40,18 +40,18 @@ jobs:
         os: [ubuntu-latest, macos-15-intel, macos-latest, windows-latest]
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         submodules: true
 
-    - uses: pypa/cibuildwheel@v3.2
+    - uses: pypa/cibuildwheel@v3.3
 
     - name: Verify clean directory
       run: git diff --exit-code
       shell: bash
 
     - name: Upload wheels
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         path: wheelhouse/*.whl
         name: dist-${{ matrix.os }}
@@ -64,7 +64,7 @@ jobs:
 
     steps:
     - uses: actions/setup-python@v6
-    - uses: actions/download-artifact@v6
+    - uses: actions/download-artifact@v7
       with:
         path: dist
         pattern: dist-*
