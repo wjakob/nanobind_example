@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: [windows-latest, macos-latest, ubuntu-latest]
-        python-version: ["3.8", "3.12"]
+        python-version: ["3.12"]
 
     steps:
     - uses: actions/checkout@v5
@@ -36,3 +36,55 @@ jobs:
 
     - name: Test
       run: python -m pytest
+
+  typecheck:
+    name: Type checking
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+
+    - name: Build package
+      run: uv sync
+
+    - name: Type check with ty
+      run: uvx ty check
+
+    - name: Type check with pyright
+      run: uvx pyright
+
+    - name: Type check with mypy
+      run: uv run --with mypy mypy .
+
+    - name: Verify type stubs work (ty)
+      run: |
+        # This should fail - if it doesn't, stubs aren't working
+        if uvx ty check typecheck_smoke.py 2>&1 | grep -q "Found 2 diagnostics"; then
+          echo "✓ ty correctly detected type errors in smoke test"
+        else
+          echo "✗ ty did not detect expected type errors"
+          exit 1
+        fi
+
+    - name: Verify type stubs work (pyright)
+      run: |
+        # This should fail - if it doesn't, stubs aren't working
+        if uvx pyright typecheck_smoke.py 2>&1 | grep -q "2 errors"; then
+          echo "✓ pyright correctly detected type errors in smoke test"
+        else
+          echo "✗ pyright did not detect expected type errors"
+          exit 1
+        fi
+
+    - name: Verify type stubs work (mypy)
+      run: |
+        # This should fail - if it doesn't, stubs aren't working
+        if uv run --with mypy mypy typecheck_smoke.py 2>&1 | grep -q 'Argument 1 to "add" has incompatible type'; then
+          echo "✓ mypy correctly detected type errors in smoke test"
+        else
+          echo "✗ mypy did not detect expected type errors"
+          exit 1
+        fi

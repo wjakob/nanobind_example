@@ -37,6 +37,65 @@ interactive Python session):
 3
 ```
 
+Development
+-----------
+
+This project uses [uv](https://docs.astral.sh/uv/) for development.
+
+### Building
+
+```bash
+# Build native project (installs in editable mode)
+uv sync
+
+# Rebuild native project from scratch (usually not necessary)
+uv sync --reinstall
+
+# Build and run tests
+uv run pytest
+```
+
+When using `uv run` the native code will automatically be rebuilt if changes
+are detected in the `cache-keys`.
+
+### Local C++ Development
+
+Generate `compile_commands.json` for IDE/LSP support (clangd, etc.):
+
+```bash
+cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+```
+
+### Type Checking
+
+The project includes type stubs (`.pyi` files) generated automatically by
+nanobind. A `py.typed` marker file is installed for
+[PEP 561](https://peps.python.org/pep-0561/) compliance, so language servers
+like Pylance, Pyright, and ty will provide completions and type checking.
+
+To run type checking:
+
+```bash
+uvx ty check
+uvx pyright
+uv run --with mypy mypy .
+```
+
+### Package Structure
+
+The extension module is built as `nanobind_example_ext` and re-exported through
+`nanobind_example/__init__.py`. When adding new bindings:
+
+1. Add the binding in `src/nanobind_example_ext.cpp`
+2. Update `src/nanobind_example/__init__.py` to re-export the new symbols
+
+Imports must be absolute:
+
+```python
+from nanobind_example import add  # Correct
+from nanobind_example_ext import add  # Won't work
+```
+
 CI Examples
 -----------
 
