@@ -3,6 +3,7 @@ load(
     "nanobind_extension",
     "nanobind_stubgen",
 )
+load("@rules_python//python:defs.bzl", "py_library")
 
 py_library(
     name = "nanobind_example",
